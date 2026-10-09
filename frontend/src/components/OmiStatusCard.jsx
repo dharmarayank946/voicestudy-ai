@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Radio, RefreshCw, Terminal, CheckCircle2, Play, Code, AlertTriangle } from 'lucide-react';
+import { fetchOmiLogs, simulateOmiWebhook } from '../services/api';
 
 export default function OmiStatusCard() {
   const [logs, setLogs] = useState([]);
@@ -10,11 +11,8 @@ export default function OmiStatusCard() {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/omi/logs');
-      if (res.ok) {
-        const data = await res.json();
-        setLogs(data.logs || []);
-      }
+      const data = await fetchOmiLogs();
+      setLogs(data.logs || []);
     } catch (err) {
       console.warn("Failed to fetch Omi logs:", err);
     } finally {
@@ -31,21 +29,14 @@ export default function OmiStatusCard() {
   const handleSimulateWebhook = async () => {
     try {
       setTestStatus("Sending test Omi payload...");
-      const res = await fetch('/api/omi/test', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTestStatus(`Success! Simulated webhook queued for UID: ${data.uid}`);
-        fetchLogs();
-      } else {
-        setTestStatus("Failed to send test webhook");
-      }
+      const data = await simulateOmiWebhook();
+      setTestStatus(`Success! Simulated webhook queued for UID: ${data.uid}`);
+      fetchLogs();
     } catch (err) {
       setTestStatus(`Error: ${err.message}`);
     }
   };
+
 
   return (
     <div className="glass-card" style={{ borderColor: 'rgba(0, 242, 254, 0.2)' }}>
