@@ -11,23 +11,27 @@ class SaveMemoryRequest(BaseModel):
     subject: Optional[str] = "General"
     topic: Optional[str] = "Study Topic"
     memory_type: Optional[str] = "voice_note"
+    uid: Optional[str] = "default_omi_user"
     metadata: Optional[Dict[str, Any]] = None
 
 class SearchMemoryRequest(BaseModel):
     query: str
     limit: Optional[int] = 5
     subject_filter: Optional[str] = None
+    uid_filter: Optional[str] = None
 
 @router.post("/save")
 def save_memory(req: SaveMemoryRequest):
     if not req.text or not req.text.strip():
         raise HTTPException(status_code=400, detail="Memory text content cannot be empty.")
     
-    result = study_memory_agent.save_study_memory(
+    result = memory_service.save_memory(
         text=req.text.strip(),
         subject=req.subject or "General",
         topic=req.topic or "Study Topic",
-        memory_type=req.memory_type or "voice_note"
+        memory_type=req.memory_type or "voice_note",
+        uid=req.uid or "default_omi_user",
+        metadata=req.metadata
     )
     return result
 
@@ -36,10 +40,11 @@ def search_memory(req: SearchMemoryRequest):
     if not req.query or not req.query.strip():
         raise HTTPException(status_code=400, detail="Search query cannot be empty.")
         
-    memories = study_memory_agent.retrieve_relevant_memories(
+    memories = memory_service.search_memories(
         query=req.query.strip(),
         limit=req.limit or 5,
-        subject_filter=req.subject_filter
+        subject_filter=req.subject_filter,
+        uid_filter=req.uid_filter
     )
     return {
         "query": req.query,
@@ -47,9 +52,13 @@ def search_memory(req: SearchMemoryRequest):
         "results": memories
     }
 
+
 @router.get("/recent")
-def get_recent_memories(limit: int = Query(default=20, le=100)):
-    memories = memory_service.get_all_memories(limit=limit)
+def get_recent_memories(
+    limit: int = Query(default=20, le=100),
+    uid_filter: Optional[str] = Query(default=None)
+):
+    memories = memory_service.get_all_memories(limit=limit, uid_filter=uid_filter)
     stats = memory_service.get_stats()
     return {
         "total_count": stats["total_memories"],
@@ -57,6 +66,7 @@ def get_recent_memories(limit: int = Query(default=20, le=100)):
         "topics": stats["topics_list"],
         "memories": memories
     }
+
 
 @router.delete("/{memory_id}")
 def delete_memory(memory_id: str):
