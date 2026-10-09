@@ -38,6 +38,8 @@ jobs:
           npm run build
         env:
           VITE_BASE_PATH: /voicestudy-ai/
+          VITE_API_URL: https://voicestudy-ai-backend.onrender.com
+
 
       - name: Create .nojekyll in Dist
         run: touch frontend/dist/.nojekyll
