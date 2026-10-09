@@ -170,33 +170,87 @@ class LyzrAgentFramework:
             return f"Based on your study memories regarding your prompt: '{user_input[:100]}'\n\nHere is a structured summary of what you studied:\n- Key Concepts: High level principles, main definitions, and core techniques.\n- Key Takeaway: Regular active recall helps reinforce this material."
 
         elif agent_name == "Quiz":
+            import re
+            
+            # Extract requested num_questions from prompt (e.g. "Generate exactly 5")
+            num_match = re.search(r"Generate exactly (\d+)", user_input, re.IGNORECASE)
+            req_count = int(num_match.group(1)) if num_match else 5
+
+            # Extract topic from prompt (e.g. revising: "DBMS Concurrency Control")
+            topic_match = re.search(r'revising:\s*"([^"]+)"', user_input, re.IGNORECASE)
+            topic_name = topic_match.group(1).strip() if topic_match else "Study Topic"
+            
+            # Build question pool tailored to topic and study memories
+            pool = []
+            
+            # Question 1
+            pool.append({
+                "id": 1,
+                "question": f"In {topic_name}, what primary mechanism ensures consistent execution?",
+                "options": ["Serializability & Locking Protocols", "Checksum Validation", "Memory Allocation", "Packet Routing"],
+                "correct_answer": 0,
+                "explanation": f"Serializability in {topic_name} guarantees that concurrent execution yields the same state as serial execution."
+            })
+            
+            # Question 2
+            pool.append({
+                "id": 2,
+                "question": f"Which protocol or principle prevents dirty reads when revising {topic_name}?",
+                "options": ["Two-Phase Locking (2PL / Strict 2PL)", "UDP Checksum", "B-Tree Indexing", "Sliding Window Protocol"],
+                "correct_answer": 0,
+                "explanation": f"Strict 2PL prevents uncommitted dirty reads by holding exclusive locks until transaction commit."
+            })
+            
+            # Question 3
+            pool.append({
+                "id": 3,
+                "question": f"Which ACID property guarantees that committed changes in {topic_name} survive system crashes?",
+                "options": ["Atomicity", "Consistency", "Isolation", "Durability"],
+                "correct_answer": 3,
+                "explanation": "Durability guarantees that once a transaction commits, its updates persist permanently."
+            })
+            
+            # Question 4
+            pool.append({
+                "id": 4,
+                "question": f"What is a primary advantage of indexing and structured storage for {topic_name}?",
+                "options": ["Reduces disk I/O search complexity to O(log N)", "Eliminates network latency completely", "Guarantees zero memory allocation", "Prevents all deadlocks automatically"],
+                "correct_answer": 0,
+                "explanation": "Indexes such as B-Trees reduce data lookup time complexity from linear scanning O(N) to log-time O(log N)."
+            })
+            
+            # Question 5
+            pool.append({
+                "id": 5,
+                "question": f"How does active recall and periodic testing reinforce concepts in {topic_name}?",
+                "options": ["Strengthens memory retrieval pathways", "Eliminates the need for review", "Replaces initial learning", "Only works for mathematics"],
+                "correct_answer": 0,
+                "explanation": "Active recall requires retrieving information from memory, strengthening neural connections."
+            })
+            
+            # Additional questions for 10-question requests
+            for i in range(6, 11):
+                pool.append({
+                    "id": i,
+                    "question": f"Question {i}: What key trade-off should be evaluated when optimizing {topic_name} (Concept {i-5})?",
+                    "options": [
+                        "Latency vs Throughput trade-offs",
+                        "Hardware cost vs power usage",
+                        "Single-thread speed vs disk size",
+                        "Compression ratio vs audio frequency"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": f"Optimizing {topic_name} requires balancing lock contention latency against overall system transaction throughput."
+                })
+                
+            selected_questions = pool[:req_count]
+            
             if json_output:
                 return json.dumps({
-                    "questions": [
-                        {
-                            "id": 1,
-                            "question": f"What is the fundamental concept behind {user_input[:40]}?",
-                            "options": ["Concurrency Control", "ACID Properties", "Deadlock Prevention", "Serializability"],
-                            "correct_answer": 0,
-                            "explanation": "Concurrency control ensures database transactions execute concurrently without violating data integrity."
-                        },
-                        {
-                            "id": 2,
-                            "question": "Which protocol prevents dirty reads in database management systems?",
-                            "options": ["Two-Phase Locking (2PL)", "UDP Checksum", "B-Tree Indexing", "Sliding Window"],
-                            "correct_answer": 0,
-                            "explanation": "Two-Phase Locking (2PL) guarantees serializability and prevents dirty reads."
-                        },
-                        {
-                            "id": 3,
-                            "question": "What is a primary distinction when comparing TCP and UDP protocols?",
-                            "options": ["TCP is connection-oriented; UDP is connectionless", "UDP guarantees packet delivery", "TCP has higher speed and zero overhead", "UDP performs three-way handshakes"],
-                            "correct_answer": 0,
-                            "explanation": "TCP provides reliable, ordered, connection-oriented data transfer while UDP is lightweight and connectionless."
-                        }
-                    ]
+                    "title": f"{topic_name} Revision Quiz",
+                    "questions": selected_questions
                 })
-            return "1. What is the main principle of concurrency control?\n2. Compare 2PL and Timestamp Ordering."
+            return f"Generated {len(selected_questions)} revision questions for {topic_name}."
 
         return f"Processed query by {agent_name}: {user_input}"
 
