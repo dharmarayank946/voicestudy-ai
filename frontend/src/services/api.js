@@ -1,4 +1,12 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    return envUrl.replace(/\/$/, '') + (envUrl.endsWith('/api') ? '' : '/api');
+  }
+  return 'http://localhost:8000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export async function fetchHealth() {
   try {
@@ -6,10 +14,17 @@ export async function fetchHealth() {
     if (!res.ok) throw new Error('Health check failed');
     return await res.json();
   } catch (err) {
-    console.error('Health API error:', err);
-    return { status: 'offline', vector_memory: { total_memories: 0 }, voice: {} };
+    console.warn('Health API unavailable:', err);
+    return { 
+      status: 'offline', 
+      notice: 'Backend URL disconnected or unconfigured. Run local server or set VITE_API_URL.',
+      vector_memory: { total_memories: 0, status: 'disconnected', provider: 'Qdrant' }, 
+      agents: { lyzr_framework: 'offline_mode' },
+      voice: { fallback_active: true } 
+    };
   }
 }
+
 
 export async function processStudyRequest(transcript, source = 'web_speech', subjectOverride = null, topicOverride = null) {
   const response = await fetch(`${API_BASE_URL}/study`, {
