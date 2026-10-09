@@ -55,14 +55,54 @@ class TestQuizGeneration(unittest.TestCase):
         data = response.json()
         for q in data["questions"]:
             question_text = q["question"]
-            # Must NOT contain raw prompt artifact "Generate exactly"
             self.assertNotIn("Generate exactly", question_text)
-            # Must contain relevant subject/topic context or standard question prefix
             self.assertTrue(len(question_text) > 15)
             self.assertIn("options", q)
             self.assertEqual(len(q["options"]), 4)
             self.assertIn(q["correct_answer"], [0, 1, 2, 3])
             self.assertTrue(len(q.get("explanation", "")) > 5)
+
+    def test_dbms_concurrency_topic_relevance(self):
+        """Verify DBMS Concurrency Control questions do not contain unrelated topics like indexing or packet routing."""
+        response = client.post("/api/quiz", json={
+            "topic": "DBMS Concurrency Control",
+            "num_questions": 5,
+            "difficulty": "medium"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        questions = data["questions"]
+        self.assertEqual(len(questions), 5)
+        
+        # Verify Question 4 specifically covers Strict 2PL and cascading aborts
+        q4 = questions[3]
+        self.assertIn("Strict Two-Phase Locking", q4["question"])
+        self.assertIn("cascading aborts", q4["question"])
+        self.assertNotIn("indexing", q4["question"].lower())
+        self.assertNotIn("log n", q4["question"].lower())
+        
+        # Verify all questions focus strictly on database concurrency concepts
+        for q in questions:
+            q_text = q["question"].lower()
+            self.assertNotIn("checksum validation", q_text)
+            self.assertNotIn("packet routing", q_text)
+
+    def test_networks_topic_relevance(self):
+        """Verify Computer Networks questions focus strictly on transport protocols and TCP/UDP."""
+        response = client.post("/api/quiz", json={
+            "topic": "Computer Networks TCP/UDP",
+            "num_questions": 5,
+            "difficulty": "medium"
+        })
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        questions = data["questions"]
+        self.assertEqual(len(questions), 5)
+        
+        # Verify Q1 focuses on three-way handshake
+        self.assertIn("three-way handshake", questions[0]["explanation"].lower())
+        # Verify Q4 focuses on congestion control
+        self.assertIn("congestion control", questions[3]["question"].lower())
 
     def test_answer_evaluation_and_score_logic(self):
         """Verify answer options and correct answer index evaluate correctly."""

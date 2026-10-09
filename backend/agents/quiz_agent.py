@@ -76,58 +76,7 @@ Context Notes:
             logger.warning(f"Quiz agent failed to parse JSON: {e}. Falling back to default generated structure.")
 
         # Structured fallback if parse fails
-        fallback_pool = [
-            {
-                "id": 1,
-                "question": f"In {topic_or_subject}, what primary mechanism ensures consistent execution?",
-                "options": ["Serializability & Locking Protocols", "Checksum Validation", "Memory Allocation", "Packet Routing"],
-                "correct_answer": 0,
-                "explanation": f"Serializability in {topic_or_subject} guarantees that concurrent execution yields the same state as serial execution."
-            },
-            {
-                "id": 2,
-                "question": f"Which protocol or principle prevents dirty reads when revising {topic_or_subject}?",
-                "options": ["Two-Phase Locking (2PL / Strict 2PL)", "UDP Checksum", "B-Tree Indexing", "Sliding Window Protocol"],
-                "correct_answer": 0,
-                "explanation": "Strict 2PL prevents uncommitted dirty reads by holding exclusive locks until transaction commit."
-            },
-            {
-                "id": 3,
-                "question": f"Which ACID property guarantees that committed changes in {topic_or_subject} survive system crashes?",
-                "options": ["Atomicity", "Consistency", "Isolation", "Durability"],
-                "correct_answer": 3,
-                "explanation": "Durability guarantees that once a transaction commits, its updates persist permanently."
-            },
-            {
-                "id": 4,
-                "question": f"What is a primary advantage of indexing and structured storage for {topic_or_subject}?",
-                "options": ["Reduces disk I/O search complexity to O(log N)", "Eliminates network latency completely", "Guarantees zero memory allocation", "Prevents all deadlocks automatically"],
-                "correct_answer": 0,
-                "explanation": "Indexes reduce lookup complexity from linear scanning to log-time."
-            },
-            {
-                "id": 5,
-                "question": f"How does active recall and periodic testing reinforce concepts in {topic_or_subject}?",
-                "options": ["Strengthens memory retrieval pathways", "Eliminates the need for review", "Replaces initial learning", "Only works for mathematics"],
-                "correct_answer": 0,
-                "explanation": "Active recall requires retrieving information from memory, strengthening neural connections."
-            }
-        ]
-        for i in range(6, 11):
-            fallback_pool.append({
-                "id": i,
-                "question": f"Question {i}: What key trade-off should be evaluated when optimizing {topic_or_subject} (Concept {i-5})?",
-                "options": [
-                    "Latency vs Throughput trade-offs",
-                    "Hardware cost vs power usage",
-                    "Single-thread speed vs disk size",
-                    "Compression ratio vs audio frequency"
-                ],
-                "correct_answer": 0,
-                "explanation": f"Optimizing {topic_or_subject} requires balancing lock contention latency against overall system transaction throughput."
-            })
-
-        questions_selected = fallback_pool[:num_questions]
+        questions_selected = lyzr_framework._build_topic_quiz_pool(topic_or_subject, num_questions)
         return {
             "status": "success",
             "title": f"{topic_or_subject} Revision Quiz",

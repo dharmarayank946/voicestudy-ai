@@ -180,70 +180,7 @@ class LyzrAgentFramework:
             topic_match = re.search(r'revising:\s*"([^"]+)"', user_input, re.IGNORECASE)
             topic_name = topic_match.group(1).strip() if topic_match else "Study Topic"
             
-            # Build question pool tailored to topic and study memories
-            pool = []
-            
-            # Question 1
-            pool.append({
-                "id": 1,
-                "question": f"In {topic_name}, what primary mechanism ensures consistent execution?",
-                "options": ["Serializability & Locking Protocols", "Checksum Validation", "Memory Allocation", "Packet Routing"],
-                "correct_answer": 0,
-                "explanation": f"Serializability in {topic_name} guarantees that concurrent execution yields the same state as serial execution."
-            })
-            
-            # Question 2
-            pool.append({
-                "id": 2,
-                "question": f"Which protocol or principle prevents dirty reads when revising {topic_name}?",
-                "options": ["Two-Phase Locking (2PL / Strict 2PL)", "UDP Checksum", "B-Tree Indexing", "Sliding Window Protocol"],
-                "correct_answer": 0,
-                "explanation": f"Strict 2PL prevents uncommitted dirty reads by holding exclusive locks until transaction commit."
-            })
-            
-            # Question 3
-            pool.append({
-                "id": 3,
-                "question": f"Which ACID property guarantees that committed changes in {topic_name} survive system crashes?",
-                "options": ["Atomicity", "Consistency", "Isolation", "Durability"],
-                "correct_answer": 3,
-                "explanation": "Durability guarantees that once a transaction commits, its updates persist permanently."
-            })
-            
-            # Question 4
-            pool.append({
-                "id": 4,
-                "question": f"What is a primary advantage of indexing and structured storage for {topic_name}?",
-                "options": ["Reduces disk I/O search complexity to O(log N)", "Eliminates network latency completely", "Guarantees zero memory allocation", "Prevents all deadlocks automatically"],
-                "correct_answer": 0,
-                "explanation": "Indexes such as B-Trees reduce data lookup time complexity from linear scanning O(N) to log-time O(log N)."
-            })
-            
-            # Question 5
-            pool.append({
-                "id": 5,
-                "question": f"How does active recall and periodic testing reinforce concepts in {topic_name}?",
-                "options": ["Strengthens memory retrieval pathways", "Eliminates the need for review", "Replaces initial learning", "Only works for mathematics"],
-                "correct_answer": 0,
-                "explanation": "Active recall requires retrieving information from memory, strengthening neural connections."
-            })
-            
-            # Additional questions for 10-question requests
-            for i in range(6, 11):
-                pool.append({
-                    "id": i,
-                    "question": f"Question {i}: What key trade-off should be evaluated when optimizing {topic_name} (Concept {i-5})?",
-                    "options": [
-                        "Latency vs Throughput trade-offs",
-                        "Hardware cost vs power usage",
-                        "Single-thread speed vs disk size",
-                        "Compression ratio vs audio frequency"
-                    ],
-                    "correct_answer": 0,
-                    "explanation": f"Optimizing {topic_name} requires balancing lock contention latency against overall system transaction throughput."
-                })
-                
-            selected_questions = pool[:req_count]
+            selected_questions = self._build_topic_quiz_pool(topic_name, req_count, user_input)
             
             if json_output:
                 return json.dumps({
@@ -253,6 +190,311 @@ class LyzrAgentFramework:
             return f"Generated {len(selected_questions)} revision questions for {topic_name}."
 
         return f"Processed query by {agent_name}: {user_input}"
+
+    def _build_topic_quiz_pool(self, topic_name: str, req_count: int, user_input: str = "") -> List[Dict[str, Any]]:
+        """Build highly accurate topic-specific question banks for offline execution."""
+        topic_lower = topic_name.lower()
+        
+        # 1. DBMS & Concurrency Control Bank
+        if any(k in topic_lower for k in ["dbms", "concurrency", "transaction", "database", "2pl", "lock", "acid"]):
+            pool = [
+                {
+                    "id": 1,
+                    "question": f"In {topic_name}, what is the primary goal of concurrency control?",
+                    "options": [
+                        "Ensuring serializability of concurrent transactions",
+                        "Maximizing physical disk storage capacity",
+                        "Converting SQL queries to assembly code",
+                        "Encrypting network packets between client and server"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Concurrency control ensures that concurrent execution of transactions yields a database state equivalent to serial execution."
+                },
+                {
+                    "id": 2,
+                    "question": f"In {topic_name}, how do Shared (S) and Exclusive (X) locks differ?",
+                    "options": [
+                        "Shared locks allow multiple concurrent readers; Exclusive locks permit only one writer",
+                        "Exclusive locks allow unlimited readers; Shared locks permit only one writer",
+                        "Shared locks automatically commit transactions; Exclusive locks abort them",
+                        "Both Shared and Exclusive locks allow concurrent writing"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Shared locks can be held simultaneously by multiple transactions for reading, whereas Exclusive locks grant exclusive write access."
+                },
+                {
+                    "id": 3,
+                    "question": f"What defines the Two-Phase Locking (2PL) protocol in {topic_name}?",
+                    "options": [
+                        "A growing phase where locks are acquired, followed by a shrinking phase where locks are released",
+                        "Executing transactions twice to compare hash outputs",
+                        "Locking data items for exactly 2 seconds during commit",
+                        "Splitting queries into two separate SQL statements"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Under 2PL, a transaction cannot acquire any new locks once it has released its first lock."
+                },
+                {
+                    "id": 4,
+                    "question": f"How does Strict Two-Phase Locking (Strict 2PL) prevent cascading aborts in {topic_name}?",
+                    "options": [
+                        "By holding all Exclusive locks until the transaction commits or aborts",
+                        "By releasing locks immediately after every SQL SELECT query",
+                        "By disabling all concurrent transactions entirely",
+                        "By storing log records in RAM instead of disk"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Strict 2PL prevents uncommitted dirty reads by retaining all exclusive locks until transaction completion."
+                },
+                {
+                    "id": 5,
+                    "question": f"In {topic_name}, what condition describes a deadlock between transactions?",
+                    "options": [
+                        "Two or more transactions wait indefinitely for locks held by each other",
+                        "A transaction reads data that has already been committed",
+                        "A query takes longer than 10 milliseconds to execute",
+                        "The database storage engine runs out of disk space"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Deadlock occurs when transactions form a cycle in the Wait-For Graph, each waiting for a lock held by another."
+                },
+                {
+                    "id": 6,
+                    "question": f"Which transaction isolation level in {topic_name} prevents dirty reads, non-repeatable reads, and phantom reads?",
+                    "options": [
+                        "Serializable",
+                        "Read Committed",
+                        "Read Uncommitted",
+                        "Repeatable Read"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Serializable isolation provides the highest level of isolation, preventing all concurrency anomalies including phantom reads."
+                },
+                {
+                    "id": 7,
+                    "question": f"Which ACID property in {topic_name} guarantees that execution of concurrent transactions yields a state equivalent to serial execution?",
+                    "options": [
+                        "Isolation",
+                        "Atomicity",
+                        "Consistency",
+                        "Durability"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Isolation ensures that concurrent transaction execution appears isolated and serializable."
+                },
+                {
+                    "id": 8,
+                    "question": f"How does the Timestamp Ordering protocol enforce serializability in {topic_name}?",
+                    "options": [
+                        "Transactions are ordered strictly by their unique logical timestamps",
+                        "Transactions are ordered by memory size",
+                        "Locks are assigned randomly by the operating system",
+                        "All write operations are deferred to midnight"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Timestamp Ordering resolves conflicts by ensuring transactions execute in strict timestamp order."
+                },
+                {
+                    "id": 9,
+                    "question": f"What is a primary cause of cascading aborts in a database schedule for {topic_name}?",
+                    "options": [
+                        "A transaction reads uncommitted data written by another transaction that subsequently aborts",
+                        "A table index is deleted while a query is running",
+                        "A transaction releases a shared lock before reading data",
+                        "The CPU frequency decreases under heavy load"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "If Transaction A reads dirty data from Transaction B, and Transaction B aborts, Transaction A must also abort (cascading abort)."
+                },
+                {
+                    "id": 10,
+                    "question": f"In {topic_name}, what role does the Write-Ahead Logging (WAL) protocol play in transaction recovery?",
+                    "options": [
+                        "Ensures log records are written to persistent storage before data modifications are flushed",
+                        "Deletes all transaction history after commit",
+                        "Compresses index files to reduce memory footprint",
+                        "Prevents network packet loss during remote database connections"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "WAL guarantees durability and atomicity by recording change logs on stable storage prior to flushing dirty pages."
+                }
+            ]
+            return pool[:req_count]
+
+        # 2. Computer Networks & Protocols Bank
+        elif any(k in topic_lower for k in ["network", "tcp", "udp", "protocol", "ip", "socket"]):
+            pool = [
+                {
+                    "id": 1,
+                    "question": f"In {topic_name}, what mechanism does TCP use to establish a reliable connection?",
+                    "options": [
+                        "Three-way handshake (SYN, SYN-ACK, ACK)",
+                        "UDP datagram broadcast",
+                        "CSMA/CD carrier sensing",
+                        "B-Tree index traversal"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "TCP establishes connection state via a three-way handshake before transmitting application data."
+                },
+                {
+                    "id": 2,
+                    "question": f"In {topic_name}, what is a key difference between TCP and UDP?",
+                    "options": [
+                        "TCP is connection-oriented and reliable; UDP is connectionless and lightweight",
+                        "UDP guarantees ordered delivery; TCP does not",
+                        "TCP operates at the physical layer; UDP operates at the application layer",
+                        "UDP uses a 20-byte mandatory header; TCP uses 8 bytes"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "TCP provides reliable, ordered stream delivery while UDP sends connectionless datagrams with lower latency."
+                },
+                {
+                    "id": 3,
+                    "question": f"How does TCP flow control protect the receiver in {topic_name}?",
+                    "options": [
+                        "Using a sliding window mechanism based on the receiver's advertised window size",
+                        "By dropping packets randomly when receiver buffer is 50% full",
+                        "By increasing sender packet size dynamically",
+                        "By switching transport protocols to UDP automatically"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Flow control prevents a fast sender from overwhelming a slow receiver by adhering to the advertised receive window."
+                },
+                {
+                    "id": 4,
+                    "question": f"In {topic_name}, what algorithms does TCP use for congestion control?",
+                    "options": [
+                        "Slow Start, Congestion Avoidance, Fast Retransmit, and Fast Recovery",
+                        "Strict 2PL and Wait-For Graph analysis",
+                        "Round-Robin scheduling and Shortest Job First",
+                        "LRU page replacement and FIFO queueing"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "TCP manages network congestion dynamically using Slow Start and Congestion Avoidance algorithms."
+                },
+                {
+                    "id": 5,
+                    "question": f"At which OSI model layer do TCP and UDP operate in {topic_name}?",
+                    "options": [
+                        "Transport Layer (Layer 4)",
+                        "Network Layer (Layer 3)",
+                        "Data Link Layer (Layer 2)",
+                        "Application Layer (Layer 7)"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "TCP and UDP are Transport Layer protocols providing end-to-end communication services."
+                }
+            ]
+            for i in range(6, 11):
+                pool.append({
+                    "id": i,
+                    "question": f"In {topic_name} (Concept {i}), what is the primary role of port numbers?",
+                    "options": [
+                        "Process-to-process multiplexing and demultiplexing on a host",
+                        "Identifying physical Ethernet network interface cards",
+                        "Encrypting IP packet payloads",
+                        "Allocating physical RAM to socket buffers"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Port numbers identify specific application processes running on a host machine."
+                })
+            return pool[:req_count]
+
+        # 3. Operating Systems Bank
+        elif any(k in topic_lower for k in ["os", "operating system", "paging", "memory", "process"]):
+            pool = [
+                {
+                    "id": 1,
+                    "question": f"In {topic_name}, what event occurs when a requested page is not present in physical RAM?",
+                    "options": [
+                        "Page Fault interrupt",
+                        "Deadlock exception",
+                        "Segment fault crash",
+                        "TCP checksum mismatch"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "A page fault signals the OS to retrieve the missing page from backing store into physical memory."
+                },
+                {
+                    "id": 2,
+                    "question": f"Which page replacement algorithm in {topic_name} yields the theoretical minimum page fault rate?",
+                    "options": [
+                        "Optimal Page Replacement (Belady's Algorithm)",
+                        "First-In First-Out (FIFO)",
+                        "Least Recently Used (LRU)",
+                        "Second Chance Page Replacement"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Optimal page replacement replaces the page that will not be used for the longest future duration."
+                },
+                {
+                    "id": 3,
+                    "question": f"In {topic_name}, what is the purpose of the Translation Lookaside Buffer (TLB)?",
+                    "options": [
+                        "High-speed hardware cache for page table virtual-to-physical address translations",
+                        "Buffer for incoming network packets",
+                        "Disk storage cache for SQL transactions",
+                        "Queue for CPU thread scheduling"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "TLB caches address translations to avoid multi-level page table lookups in RAM."
+                },
+                {
+                    "id": 4,
+                    "question": f"In {topic_name}, what causes system thrashing?",
+                    "options": [
+                        "High page swapping activity when physical RAM is insufficient for process working sets",
+                        "High CPU utilization during arithmetic operations",
+                        "Excessive disk fragmentation on SSD drives",
+                        "Using binary semaphores instead of mutexes"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Thrashing occurs when the system spends more time swapping pages in/out than executing instructions."
+                },
+                {
+                    "id": 5,
+                    "question": f"Which of the following is NOT one of Coffman's four necessary conditions for deadlock in {topic_name}?",
+                    "options": [
+                        "Preemption allowed",
+                        "Mutual Exclusion",
+                        "Hold and Wait",
+                        "Circular Wait"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "Deadlock requires No Preemption (resources cannot be forcibly confiscated from a process)."
+                }
+            ]
+            for i in range(6, 11):
+                pool.append({
+                    "id": i,
+                    "question": f"In {topic_name} (Concept {i}), what state information is saved during an OS context switch?",
+                    "options": [
+                        "CPU registers, Program Counter, and Process Control Block (PCB)",
+                        "Database transaction locks and WAL log records",
+                        "HTML page elements and CSS stylesheets",
+                        "Network socket port allocations"
+                    ],
+                    "correct_answer": 0,
+                    "explanation": "A context switch saves process register states and program counter into the PCB to resume execution later."
+                })
+            return pool[:req_count]
+
+        # 4. Default / General Topic Bank
+        pool = []
+        for i in range(1, req_count + 1):
+            pool.append({
+                "id": i,
+                "question": f"In {topic_name}, what is Question {i}'s fundamental principle?",
+                "options": [
+                    f"Core concept {i} of {topic_name}",
+                    f"Secondary property {i} of {topic_name}",
+                    f"Alternative formulation {i} of {topic_name}",
+                    f"Implementation detail {i} of {topic_name}"
+                ],
+                "correct_answer": 0,
+                "explanation": f"Question {i} evaluates key principles directly relevant to {topic_name}."
+            })
+        return pool
 
 lyzr_framework = LyzrAgentFramework()
 
