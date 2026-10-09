@@ -50,6 +50,9 @@ export default function MemoryView({ memories, onRefreshMemories }) {
     if (window.confirm('Delete this study memory from Qdrant?')) {
       try {
         await deleteMemory(id);
+        if (searchResults) {
+          setSearchResults(prev => prev ? prev.filter(m => m.id !== id) : null);
+        }
         if (onRefreshMemories) onRefreshMemories();
       } catch (err) {
         alert('Failed to delete memory.');
