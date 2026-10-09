@@ -15,7 +15,19 @@ class GenerateQuizRequest(BaseModel):
 @router.post("/generate")
 def generate_quiz(req: GenerateQuizRequest):
     topic = req.topic if req.topic and req.topic.strip() else "Recent Studies"
-    num_q = req.num_questions if req.num_questions and req.num_questions in [3, 5, 10] else 5
+    
+    try:
+        raw_q = int(req.num_questions) if req.num_questions is not None else 5
+    except (ValueError, TypeError):
+        raw_q = 5
+
+    if raw_q <= 3:
+        num_q = 3
+    elif raw_q >= 10:
+        num_q = 10
+    else:
+        num_q = 5
+
     diff = req.difficulty if req.difficulty in ["easy", "medium", "hard"] else "medium"
 
     # Retrieve relevant study memories to build questions from

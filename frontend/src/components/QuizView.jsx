@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HelpCircle, Sparkles, CheckCircle2, XCircle, RotateCcw, Award } from 'lucide-react';
+import { HelpCircle, Sparkles, CheckCircle2, XCircle, RotateCcw, Award, AlertCircle } from 'lucide-react';
 import { generateQuiz } from '../services/api';
 
 export default function QuizView() {
@@ -9,6 +9,7 @@ export default function QuizView() {
   
   const [quizData, setQuizData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [userAnswers, setUserAnswers] = useState({});
   const [showResults, setShowResults] = useState(false);
 
@@ -17,11 +18,13 @@ export default function QuizView() {
     setIsLoading(true);
     setUserAnswers({});
     setShowResults(false);
+    setError(null);
     try {
       const res = await generateQuiz(topic, numQuestions, difficulty);
       setQuizData(res);
     } catch (err) {
-      alert(`Quiz generation failed: ${err.message}`);
+      setError(err.message || 'Quiz generation failed.');
+      setQuizData(null);
     } finally {
       setIsLoading(false);
     }
@@ -95,6 +98,14 @@ export default function QuizView() {
           </button>
         </form>
       </div>
+
+      {/* Inline Error Banner */}
+      {error && (
+        <div className="glass-card" style={{ background: 'rgba(244, 63, 94, 0.15)', borderColor: 'rgba(244, 63, 94, 0.4)', color: 'var(--accent-rose)', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1rem' }}>
+          <AlertCircle size={20} />
+          <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>{error}</span>
+        </div>
+      )}
 
       {/* Quiz Questions Container */}
       {quizData && (
