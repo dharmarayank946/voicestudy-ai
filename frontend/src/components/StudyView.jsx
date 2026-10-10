@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Send, Sparkles, Brain, Cpu, CheckCircle2, MessageSquare, HelpCircle, Layers } from 'lucide-react';
 import OmiStatusCard from './OmiStatusCard';
 
@@ -107,7 +107,7 @@ export default function StudyView({ onProcessInput, isProcessing, responseData }
                             color: optIdx === q.correct_answer ? 'var(--accent-emerald)' : 'var(--text-secondary)'
                           }}
                         >
-                          {String.fromCharCode(65 + optIdx)}. {opt} {optIdx === q.correct_answer && '✓'}
+                          {String.fromCharCode(65 + optIdx)}. {opt} {optIdx === q.correct_answer && ' (Correct)'}
                         </div>
                       ))}
                     </div>

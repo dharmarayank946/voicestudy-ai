@@ -53,10 +53,10 @@ Please generate a comprehensive, accurate study assistance response."""
         # If offline fallback returned generic message, augment with exact retrieved memory snippets
         if "Based on your study memories" in response_text and retrieved_memories:
             notes_bullets = "\n".join([
-                f"• **[{m.get('subject', 'General')} - {m.get('topic', 'Topic')}]**: {m.get('text')}"
+                f"- **[{m.get('subject', 'General')} - {m.get('topic', 'Topic')}]**: {m.get('text')}"
                 for m in retrieved_memories[:3]
             ])
-            response_text = f"### 📚 Retrieved Study Memories from Qdrant:\n\n{notes_bullets}\n\n### 💡 Key Revision Summary:\n- **Core Concepts**: You studied key database and system fundamentals related to your query.\n- **Active Recall Tip**: Review the mechanisms above to prepare for your revision quiz!"
+            response_text = f"### Retrieved Study Memories from Qdrant:\n\n{notes_bullets}\n\n### Key Revision Summary:\n- **Core Concepts**: You studied key database and system fundamentals related to your query.\n- **Active Recall Tip**: Review the mechanisms above to prepare for your revision quiz!"
 
         return {
             "answer": response_text,
