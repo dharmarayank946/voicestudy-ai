@@ -199,7 +199,32 @@ class LyzrAgentFramework:
         q_lower = user_input.lower()
         notice = "> ⚡ **Offline Engine Fallback**: Intelligent AI provider API key is not configured. Displaying curated subject knowledge.\n\n"
 
-        # 1. Operating Systems
+        # 1. Mathematics
+        if any(k in q_lower for k in ["matrix", "linear algebra", "vector", "calculus", "derivative", "integral", "eigenvalue"]):
+            return notice + "### Mathematics: Fundamentals for Computer Science\n\n" \
+                   "- **Linear Algebra**: Vectors and matrices model spatial transformations, system equations, and machine learning weights.\n" \
+                   "- **Calculus**: Derivatives quantify change rates powering optimization techniques like Gradient Descent, while integrals compute continuous totals.\n" \
+                   "- **Matrix Multiplication**: Inner product of row vectors by column vectors transforming coordinate bases across vector spaces.\n" \
+                   "- **Practical Example**: 3D computer graphics engines use 4x4 transformation matrices to project 3D object vertices onto 2D screen coordinates."
+
+        # 2. Software Engineering
+        if any(k in q_lower for k in ["solid", "design principle", "single responsibility", "liskov", "dependency inversion"]):
+            return notice + "### Software Engineering: SOLID Principles\n\n" \
+                   "- **Single Responsibility**: Each class has one clear responsibility and reason to change.\n" \
+                   "- **Open/Closed**: Software entities are open for extension but closed for direct modification.\n" \
+                   "- **Liskov Substitution**: Subclasses must be transparently substitutable for their parent classes.\n" \
+                   "- **Interface Segregation**: Prefer small, focused interfaces over bulky monolithic ones.\n" \
+                   "- **Dependency Inversion**: High-level modules depend on abstractions rather than low-level concrete implementations.\n" \
+                   "- **Practical Example**: Defining interface abstractions for external integrations allows swapping service providers without rewriting core logic."
+
+        if any(k in q_lower for k in ["design pattern", "factory", "singleton", "observer", "adapter", "decorator"]):
+            return notice + "### Software Engineering: Key Design Patterns\n\n" \
+                   "- **Creational**: Factory Method and Singleton encapsulate object creation.\n" \
+                   "- **Structural**: Adapter and Decorator dynamically compose complex structures.\n" \
+                   "- **Behavioral**: Observer and Strategy coordinate algorithm execution and event notifications.\n" \
+                   "- **Practical Example**: The **Observer Pattern** allows event producers to automatically notify registered UI listeners on state updates."
+
+        # 3. Operating Systems
         if any(k in q_lower for k in ["virtual memory", "paging", "page fault", "tlb"]):
             return notice + "### Operating Systems: Virtual Memory & Paging\n\n" \
                    "- **Core Concept**: Virtual Memory separates physical RAM from logical process address space using fixed-size Paging.\n" \
@@ -219,33 +244,16 @@ class LyzrAgentFramework:
                    "- **Coffman Conditions**: Mutual Exclusion, Hold & Wait, No Preemption, and Circular Wait.\n" \
                    "- **Prevention**: Resource allocation algorithms like **Banker's Algorithm** prevent deadlock states by keeping the system in a safe state."
 
-        # 2. Software Engineering
-        if any(k in q_lower for k in ["solid", "design principle"]):
-            return notice + "### Software Engineering: SOLID Principles\n\n" \
-                   "- **Single Responsibility**: Each class has one clear responsibility and reason to change.\n" \
-                   "- **Open/Closed**: Software entities are open for extension but closed for direct modification.\n" \
-                   "- **Liskov Substitution**: Subclasses must be transparently substitutable for their parent classes.\n" \
-                   "- **Interface Segregation**: Prefer small, focused interfaces over bulky monolithic ones.\n" \
-                   "- **Dependency Inversion**: High-level modules depend on abstractions rather than low-level concrete implementations.\n" \
-                   "- **Example**: Defining interface abstractions for external integrations allows swapping service providers without rewriting core logic."
-
-        if any(k in q_lower for k in ["design pattern", "factory", "singleton", "observer"]):
-            return notice + "### Software Engineering: Key Design Patterns\n\n" \
-                   "- **Creational**: Factory Method and Singleton encapsulate object creation.\n" \
-                   "- **Structural**: Adapter and Decorator dynamically compose complex structures.\n" \
-                   "- **Behavioral**: Observer and Strategy coordinate algorithm execution and event notifications.\n" \
-                   "- **Example**: The **Observer Pattern** allows event producers to automatically notify registered UI listeners on state updates."
-
-        # 3. Computer Networks
+        # 4. Computer Networks
         if any(k in q_lower for k in ["tcp", "udp"]):
             return notice + "### Computer Networks: TCP vs UDP Transport Protocols\n\n" \
                    "- **TCP**: Connection-oriented, reliable, guarantees ordered delivery using 3-way handshakes and flow/congestion control.\n" \
                    "- **UDP**: Connectionless, lightweight datagram protocol with low overhead and minimal latency.\n" \
-                   "- **Example**: Web traffic (HTTP/HTTPS) relies on TCP; live video streaming and gaming use UDP."
+                   "- **Practical Example**: Web traffic (HTTP/HTTPS) relies on TCP; live video streaming and gaming use UDP."
 
-        if any(k in q_lower for k in ["osi", "layer"]):
+        if any(k in q_lower for k in ["osi", "layer", "router", "switch", "mac address"]):
             return notice + "### Computer Networks: 7-Layer OSI Reference Model\n\n" \
-                   "1. **Physical**: Raw bitstream transmission over media.\n" \
+                   "1. **Physical**: Raw bitstream transmission over physical media.\n" \
                    "2. **Data Link**: MAC address node-to-node framing.\n" \
                    "3. **Network**: IP packet routing across network paths.\n" \
                    "4. **Transport**: Host-to-host end-to-end communication (TCP/UDP).\n" \
@@ -253,38 +261,36 @@ class LyzrAgentFramework:
                    "6. **Presentation**: Data formatting, encryption, and compression.\n" \
                    "7. **Application**: Network application interface (HTTP, DNS, SSH)."
 
-        # 4. DBMS
-        if any(k in q_lower for k in ["dbms", "concurrency", "2pl", "transaction", "lock"]):
+        # 5. DBMS (Only matched when explicit DBMS terms are in query)
+        if any(k in q_lower for k in ["dbms", "database", "2pl", "concurrency control", "acid", "sql", "transaction lock"]):
             return notice + "### DBMS: Concurrency Control & Two-Phase Locking (2PL)\n\n" \
                    "- **ACID Isolation**: Prevents concurrent transaction anomalies (dirty reads, phantom reads).\n" \
                    "- **2PL Protocol**: Features a Growing Phase (acquiring locks) and Shrinking Phase (releasing locks).\n" \
-                   "- **Strict 2PL**: Holds exclusive locks until commit/abort to eliminate cascading aborts."
+                   "- **Strict 2PL**: Holds exclusive locks until commit/abort to eliminate cascading aborts.\n" \
+                   "- **Practical Example**: Banking systems use Strict 2PL to prevent uncommitted fund transfers from being read by concurrent queries."
 
-        # 5. Programming
+        # 6. Programming
         if any(k in q_lower for k in ["python", "gil", "async"]):
             return notice + "### Programming: Python Core Execution & Concurrency\n\n" \
                    "- **GIL**: Global Interpreter Lock prevents parallel execution of Python bytecodes in a single CPython process.\n" \
                    "- **Concurrency**: Use `multiprocessing` for CPU-intensive workloads and `asyncio` for non-blocking I/O tasks."
 
-        if any(k in q_lower for k in ["data structure", "algorithm", "array", "tree", "graph"]):
+        if any(k in q_lower for k in ["data structure", "algorithm", "array", "tree", "graph", "sorting", "searching"]):
             return notice + "### Data Structures & Algorithms Overview\n\n" \
                    "- **Arrays & Hash Tables**: Direct index or hashed key access with O(1) time complexity.\n" \
                    "- **Trees & Graphs**: Hierarchical/linked structures navigated using BFS or DFS algorithms.\n" \
                    "- **Big-O Notation**: Quantifies execution scaling relative to input volume."
 
-        # 6. Mathematics
-        if any(k in q_lower for k in ["math", "calculus", "matrix", "linear algebra"]):
-            return notice + "### Mathematics: Fundamentals for Computer Science\n\n" \
-                   "- **Linear Algebra**: Vectors and matrices model spatial transformations and machine learning weights.\n" \
-                   "- **Calculus**: Derivatives quantify change rates, powering optimization techniques like gradient descent."
+        # 7. Open-Ended / General Knowledge Fallback
+        import re
+        clean_q = re.sub(r'^(STUDENT QUESTION:|Explain|What is|What are|Describe|How does|Tell me about)\s*', '', user_input, flags=re.IGNORECASE).strip(' "?.\'')
+        topic_title = clean_q.title() if clean_q else "General Knowledge Concept"
 
-        # 7. General Fallback
-        query_text = user_input.split('Student Question: "')[-1].split('"')[0] if 'Student Question:' in user_input else user_input
-        return notice + f"### Study Explanation for: '{query_text[:80]}'\n\n" \
-               f"- **Core Concept**: Core principles, definitions, and operational mechanisms governing this topic.\n" \
-               f"- **System Analysis**: Modular breakdown of step-by-step interactions between system components.\n" \
-               f"- **Practical Application**: Applying these concepts cleanly in software engineering or problem solving.\n" \
-               f"- **Key Takeaway**: Save this note in your study workspace to practice with automated revision quizzes!"
+        return notice + f"### Explanation: {topic_title}\n\n" \
+               f"- **Core Concept**: Core principles, fundamental definitions, and foundational rules governing **{topic_title}**.\n" \
+               f"- **Key Mechanism**: Primary operational workflow, step-by-step processing, and component interactions.\n" \
+               f"- **Practical Application**: Implementing and applying **{topic_title}** effectively in software systems and real-world domain scenarios.\n" \
+               f"- **Practical Example**: Real-world implementation demonstrating **{topic_title}** principles in action with clear outcomes."
 
     def _build_topic_quiz_pool(self, topic_name: str, req_count: int, user_input: str = "") -> List[Dict[str, Any]]:
         topic_lower = topic_name.lower()

@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 from typing import Dict, Any, List, Optional
 from backend.services.lyzr_agent_framework import lyzr_framework
 
@@ -14,6 +14,14 @@ Guidelines:
 4. Keep answers helpful, concise, and structured for quick revision.
 """
 
+STOP_WORDS = {
+    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+    "in", "on", "at", "to", "for", "of", "with", "by", "from", "and", "or",
+    "what", "how", "why", "when", "where", "which", "who", "it", "its",
+    "this", "that", "these", "those", "i", "you", "my", "your", "we", "can",
+    "does", "do", "did", "tell", "explain", "me", "about", "studied", "learned", "note"
+}
+
 class StudyAssistantAgent:
     def __init__(self):
         self.name = "Study Assistant Agent"
@@ -28,12 +36,17 @@ class StudyAssistantAgent:
 
         relevant_memories = []
         if retrieved_memories:
-            q_words = set(user_query.lower().split())
+            q_keywords = set(w for w in user_query.lower().split() if w not in STOP_WORDS and len(w) > 1)
             for m in retrieved_memories:
-                m_txt = (m.get("text", "") + " " + m.get("subject", "") + " " + m.get("topic", "")).lower()
-                m_words = set(m_txt.split())
-                overlap = len(q_words.intersection(m_words))
-                if overlap >= 1 or len(retrieved_memories) == 1:
+                m_sub = (m.get("subject") or "").lower()
+                m_top = (m.get("topic") or "").lower()
+                m_txt = (m.get("text") or "").lower()
+                
+                m_words = set(w for w in (m_txt + " " + m_sub + " " + m_top).split() if w not in STOP_WORDS and len(w) > 1)
+                overlap = len(q_keywords.intersection(m_words))
+                
+                is_sub_match = any(k in m_sub or k in m_top for k in q_keywords if len(k) > 2)
+                if overlap >= 2 or (overlap >= 1 and is_sub_match):
                     relevant_memories.append(m)
 
         context_str = ""
@@ -49,7 +62,7 @@ class StudyAssistantAgent:
         history_str = ""
         if history:
             history_lines = [f"{msg.get('role', 'user')}: {msg.get('content', '')}" for msg in history[-4:]]
-            history_str = "CONVERSATION HISTORY:\n" + "\n".join(history_lines) + "\n\n"
+            history_str = "CONVERSATION HISTORY (FOR FOLLOW-UP CONTEXT ONLY):\n" + "\n".join(history_lines) + "\n\n"
 
         full_prompt = f"{history_str}STUDENT QUESTION: \"{user_query}\"\n\nRETRIEVED NOTEBOOK MEMORIES (IF RELEVANT):\n{context_str if context_str else 'No prior notebook memories matched.'}\n\nPlease generate an intelligent, structured study tutor response."
 
