@@ -21,6 +21,9 @@ export default function QuizView() {
     setError(null);
     try {
       const res = await generateQuiz(topic, numQuestions, difficulty);
+      if (!res || !res.questions || res.questions.length === 0) {
+        throw new Error('No quiz questions returned for the selected topic.');
+      }
       setQuizData(res);
     } catch (err) {
       setError(err.message || 'Quiz generation failed.');
@@ -117,7 +120,7 @@ export default function QuizView() {
                 {quizData.title}
               </h4>
               <span className="badge badge-purple" style={{ marginTop: '0.3rem' }}>
-                Difficulty: {quizData.difficulty} • {quizData.count} Questions
+                Difficulty: {quizData.difficulty} • {quizData.questions?.length || quizData.count} Questions
               </span>
             </div>
 

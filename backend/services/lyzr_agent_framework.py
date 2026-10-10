@@ -194,18 +194,19 @@ class LyzrAgentFramework:
     def _build_topic_quiz_pool(self, topic_name: str, req_count: int, user_input: str = "") -> List[Dict[str, Any]]:
         """Build highly accurate topic-specific question banks for offline execution."""
         topic_lower = topic_name.lower()
+        search_text = topic_lower if topic_lower not in ["recent studies", "study topic", "general", ""] else (topic_name + " " + user_input).lower()
         
         # 1. DBMS & Concurrency Control Bank
-        if any(k in topic_lower for k in ["dbms", "concurrency", "transaction", "database", "2pl", "lock", "acid"]):
+        if any(k in search_text for k in ["dbms", "concurrency", "transaction", "database", "2pl", "lock", "acid"]):
             pool = [
                 {
                     "id": 1,
                     "question": f"In {topic_name}, what is the primary goal of concurrency control?",
                     "options": [
                         "Ensuring serializability of concurrent transactions",
-                        "Maximizing physical disk storage capacity",
-                        "Converting SQL queries to assembly code",
-                        "Encrypting network packets between client and server"
+                        "Executing all database queries sequentially in single-user mode",
+                        "Translating SQL queries into physical disk block offsets",
+                        "Reverting database schema changes automatically on startup"
                     ],
                     "correct_answer": 0,
                     "explanation": "Concurrency control ensures that concurrent execution of transactions yields a database state equivalent to serial execution."
@@ -217,7 +218,7 @@ class LyzrAgentFramework:
                         "Shared locks allow multiple concurrent readers; Exclusive locks permit only one writer",
                         "Exclusive locks allow unlimited readers; Shared locks permit only one writer",
                         "Shared locks automatically commit transactions; Exclusive locks abort them",
-                        "Both Shared and Exclusive locks allow concurrent writing"
+                        "Both Shared and Exclusive locks allow concurrent writing without restriction"
                     ],
                     "correct_answer": 0,
                     "explanation": "Shared locks can be held simultaneously by multiple transactions for reading, whereas Exclusive locks grant exclusive write access."
@@ -227,9 +228,9 @@ class LyzrAgentFramework:
                     "question": f"What defines the Two-Phase Locking (2PL) protocol in {topic_name}?",
                     "options": [
                         "A growing phase where locks are acquired, followed by a shrinking phase where locks are released",
-                        "Executing transactions twice to compare hash outputs",
-                        "Locking data items for exactly 2 seconds during commit",
-                        "Splitting queries into two separate SQL statements"
+                        "Executing transactions twice to verify consistency before commit",
+                        "Locking database tables for fixed 2-second time intervals",
+                        "Splitting single SQL operations into two separate transactions"
                     ],
                     "correct_answer": 0,
                     "explanation": "Under 2PL, a transaction cannot acquire any new locks once it has released its first lock."
@@ -241,7 +242,7 @@ class LyzrAgentFramework:
                         "By holding all Exclusive locks until the transaction commits or aborts",
                         "By releasing locks immediately after every SQL SELECT query",
                         "By disabling all concurrent transactions entirely",
-                        "By storing log records in RAM instead of disk"
+                        "By forcing all write operations to execute in separate threads"
                     ],
                     "correct_answer": 0,
                     "explanation": "Strict 2PL prevents uncommitted dirty reads by retaining all exclusive locks until transaction completion."
@@ -251,9 +252,9 @@ class LyzrAgentFramework:
                     "question": f"In {topic_name}, what condition describes a deadlock between transactions?",
                     "options": [
                         "Two or more transactions wait indefinitely for locks held by each other",
-                        "A transaction reads data that has already been committed",
-                        "A query takes longer than 10 milliseconds to execute",
-                        "The database storage engine runs out of disk space"
+                        "A transaction reads data that has already been committed by another transaction",
+                        "A query execution time exceeds the database timeout threshold",
+                        "The database transaction manager runs out of transaction identifiers"
                     ],
                     "correct_answer": 0,
                     "explanation": "Deadlock occurs when transactions form a cycle in the Wait-For Graph, each waiting for a lock held by another."
@@ -287,9 +288,9 @@ class LyzrAgentFramework:
                     "question": f"How does the Timestamp Ordering protocol enforce serializability in {topic_name}?",
                     "options": [
                         "Transactions are ordered strictly by their unique logical timestamps",
-                        "Transactions are ordered by memory size",
+                        "Transactions are ordered by execution request order",
                         "Locks are assigned randomly by the operating system",
-                        "All write operations are deferred to midnight"
+                        "All write operations are deferred until system shutdown"
                     ],
                     "correct_answer": 0,
                     "explanation": "Timestamp Ordering resolves conflicts by ensuring transactions execute in strict timestamp order."
@@ -299,9 +300,9 @@ class LyzrAgentFramework:
                     "question": f"What is a primary cause of cascading aborts in a database schedule for {topic_name}?",
                     "options": [
                         "A transaction reads uncommitted data written by another transaction that subsequently aborts",
-                        "A table index is deleted while a query is running",
-                        "A transaction releases a shared lock before reading data",
-                        "The CPU frequency decreases under heavy load"
+                        "A database table is altered while a query is running",
+                        "A transaction releases a shared lock before completing its read operation",
+                        "The transaction manager fails to flush dirty log records"
                     ],
                     "correct_answer": 0,
                     "explanation": "If Transaction A reads dirty data from Transaction B, and Transaction B aborts, Transaction A must also abort (cascading abort)."
@@ -311,9 +312,9 @@ class LyzrAgentFramework:
                     "question": f"In {topic_name}, what role does the Write-Ahead Logging (WAL) protocol play in transaction recovery?",
                     "options": [
                         "Ensures log records are written to persistent storage before data modifications are flushed",
-                        "Deletes all transaction history after commit",
-                        "Compresses index files to reduce memory footprint",
-                        "Prevents network packet loss during remote database connections"
+                        "Deletes all transaction history immediately after commit",
+                        "Compresses database data pages to reduce disk storage",
+                        "Prevents transaction aborts by auto-committing uncommitted modifications"
                     ],
                     "correct_answer": 0,
                     "explanation": "WAL guarantees durability and atomicity by recording change logs on stable storage prior to flushing dirty pages."
@@ -322,7 +323,7 @@ class LyzrAgentFramework:
             return pool[:req_count]
 
         # 2. Computer Networks & Protocols Bank
-        elif any(k in topic_lower for k in ["network", "tcp", "udp", "protocol", "ip", "socket"]):
+        elif any(k in search_text for k in ["network", "tcp", "udp", "protocol", "ip", "socket"]):
             pool = [
                 {
                     "id": 1,
@@ -331,7 +332,7 @@ class LyzrAgentFramework:
                         "Three-way handshake (SYN, SYN-ACK, ACK)",
                         "UDP datagram broadcast",
                         "CSMA/CD carrier sensing",
-                        "B-Tree index traversal"
+                        "Linear list scan"
                     ],
                     "correct_answer": 0,
                     "explanation": "TCP establishes connection state via a three-way handshake before transmitting application data."
@@ -365,9 +366,9 @@ class LyzrAgentFramework:
                     "question": f"In {topic_name}, what algorithms does TCP use for congestion control?",
                     "options": [
                         "Slow Start, Congestion Avoidance, Fast Retransmit, and Fast Recovery",
-                        "Strict 2PL and Wait-For Graph analysis",
-                        "Round-Robin scheduling and Shortest Job First",
-                        "LRU page replacement and FIFO queueing"
+                        "Stop-and-Wait ARQ only",
+                        "Round-Robin packet distribution",
+                        "Static bandwidth reservation"
                     ],
                     "correct_answer": 0,
                     "explanation": "TCP manages network congestion dynamically using Slow Start and Congestion Avoidance algorithms."
@@ -391,9 +392,9 @@ class LyzrAgentFramework:
                     "question": f"In {topic_name} (Concept {i}), what is the primary role of port numbers?",
                     "options": [
                         "Process-to-process multiplexing and demultiplexing on a host",
-                        "Identifying physical Ethernet network interface cards",
+                        "Identifying physical network interface card addresses",
                         "Encrypting IP packet payloads",
-                        "Allocating physical RAM to socket buffers"
+                        "Allocating memory to network socket buffers"
                     ],
                     "correct_answer": 0,
                     "explanation": "Port numbers identify specific application processes running on a host machine."
@@ -401,7 +402,7 @@ class LyzrAgentFramework:
             return pool[:req_count]
 
         # 3. Operating Systems Bank
-        elif any(k in topic_lower for k in ["os", "operating system", "paging", "memory", "process"]):
+        elif any(k in search_text for k in ["os", "operating system", "paging", "memory", "process"]):
             pool = [
                 {
                     "id": 1,
@@ -409,8 +410,8 @@ class LyzrAgentFramework:
                     "options": [
                         "Page Fault interrupt",
                         "Deadlock exception",
-                        "Segment fault crash",
-                        "TCP checksum mismatch"
+                        "Segmentation fault crash",
+                        "Bitwise checksum mismatch"
                     ],
                     "correct_answer": 0,
                     "explanation": "A page fault signals the OS to retrieve the missing page from backing store into physical memory."
@@ -432,9 +433,9 @@ class LyzrAgentFramework:
                     "question": f"In {topic_name}, what is the purpose of the Translation Lookaside Buffer (TLB)?",
                     "options": [
                         "High-speed hardware cache for page table virtual-to-physical address translations",
-                        "Buffer for incoming network packets",
-                        "Disk storage cache for SQL transactions",
-                        "Queue for CPU thread scheduling"
+                        "Buffer for incoming storage operations",
+                        "Queue for CPU thread scheduling",
+                        "Cache for application configuration parameters"
                     ],
                     "correct_answer": 0,
                     "explanation": "TLB caches address translations to avoid multi-level page table lookups in RAM."
@@ -445,7 +446,7 @@ class LyzrAgentFramework:
                     "options": [
                         "High page swapping activity when physical RAM is insufficient for process working sets",
                         "High CPU utilization during arithmetic operations",
-                        "Excessive disk fragmentation on SSD drives",
+                        "Excessive disk fragmentation",
                         "Using binary semaphores instead of mutexes"
                     ],
                     "correct_answer": 0,
@@ -470,9 +471,9 @@ class LyzrAgentFramework:
                     "question": f"In {topic_name} (Concept {i}), what state information is saved during an OS context switch?",
                     "options": [
                         "CPU registers, Program Counter, and Process Control Block (PCB)",
-                        "Database transaction locks and WAL log records",
-                        "HTML page elements and CSS stylesheets",
-                        "Network socket port allocations"
+                        "Application state log records",
+                        "User interface configuration options",
+                        "Input/Output buffer handles"
                     ],
                     "correct_answer": 0,
                     "explanation": "A context switch saves process register states and program counter into the PCB to resume execution later."
@@ -495,6 +496,5 @@ class LyzrAgentFramework:
                 "explanation": f"Question {i} evaluates key principles directly relevant to {topic_name}."
             })
         return pool
-
 lyzr_framework = LyzrAgentFramework()
 

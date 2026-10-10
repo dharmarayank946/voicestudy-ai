@@ -21,12 +21,7 @@ def generate_quiz(req: GenerateQuizRequest):
     except (ValueError, TypeError):
         raw_q = 5
 
-    if raw_q <= 3:
-        num_q = 3
-    elif raw_q >= 10:
-        num_q = 10
-    else:
-        num_q = 5
+    num_q = max(3, min(10, raw_q))
 
     diff = req.difficulty if req.difficulty in ["easy", "medium", "hard"] else "medium"
 

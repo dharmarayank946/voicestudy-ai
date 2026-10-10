@@ -89,19 +89,11 @@ export async function generateQuiz(topic = 'Recent Studies', numQuestions = 5, d
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ topic, num_questions: numQuestions, difficulty })
   });
-  if (!response.ok) throw new Error('Quiz generation failed.');
-  return await response.json();
-}
-
-export async function fetchOmiLogs() {
-  try {
-    const res = await fetch(`${API_BASE_URL}/omi/logs`);
-    if (res.ok) return await res.json();
-    return { logs: [] };
-  } catch (err) {
-    console.warn("Failed to fetch Omi logs:", err);
-    return { logs: [] };
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.detail || 'Quiz generation failed.');
   }
+  return await response.json();
 }
 
 export async function simulateOmiWebhook() {
@@ -113,3 +105,15 @@ export async function simulateOmiWebhook() {
   return await res.json();
 }
 
+
+
+export async function fetchOmiLogs() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/omi/logs`);
+    if (res.ok) return await res.json();
+    return { logs: [] };
+  } catch (err) {
+    console.warn("Failed to fetch Omi logs:", err);
+    return { logs: [] };
+  }
+}
