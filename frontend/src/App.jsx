@@ -47,7 +47,7 @@ export default function App() {
     setTimeout(() => setNotification(null), 4000);
   };
 
-  const handleProcessInput = async (transcript, source = 'web_speech') => {
+  const handleProcessInput = async (transcript, source = 'web_speech', history = null) => {
     setIsProcessing(true);
     setResponseData(null);
     try {
@@ -56,12 +56,13 @@ export default function App() {
       
       showToast(`Intent [${result.intent}] processed by ${result.agent_executed}`);
 
-      // Refresh memory list if a new memory was saved
       if (result.intent === 'REMEMBER' || result.response_type === 'memory_saved') {
         loadData();
       }
+      return result;
     } catch (err) {
-      showToast(`Error processing request: ${err.message}`, 'error');
+      showToast(`Error: ${err.message}`, 'error');
+      throw err;
     } finally {
       setIsProcessing(false);
     }

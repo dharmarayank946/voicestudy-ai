@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, Volume2, Sparkles, Send, AlertCircle, VolumeX, Square, Lightbulb } from 'lucide-react';
 import { speechService } from '../services/speech';
+import { processStudyRequest } from '../services/api';
 
-export default function VoiceOrb({ onTranscriptSubmit }) {
+export default function VoiceOrb({ onTranscriptSubmit, onProcessInput, isProcessing: externalProcessing, responseData: externalResponseData }) {
   const [orbState, setOrbState] = useState('idle'); // 'idle' | 'listening' | 'processing' | 'responding' | 'error'
   const [transcriptText, setTranscriptText] = useState('');
   const [textInput, setTextInput] = useState('');
@@ -82,48 +83,26 @@ export default function VoiceOrb({ onTranscriptSubmit }) {
     setOrbState('processing');
 
     try {
-      if (onTranscriptSubmit) {
-        const responseData = await onTranscriptSubmit(text, source);
-        setOrbState('responding');
-        
-        const spokenMessage = responseData?.message || responseData?.answer || '';
-        if (speakerEnabled && spokenMessage) {
-          speechService.speak(spokenMessage, () => {
-            setOrbState('idle');
-          });
-        } else {
-          setOrbState('idle');
-        }
+      const submitHandler = onTranscriptSubmit || onProcessInput;
+      let data = null;
+      if (submitHandler) {
+        data = await submitHandler(text, source);
       } else {
-        const res = await fetch('/api/study', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transcript: text,
-            source: source,
-            device_id: 'voice_orb'
-          })
-        });
+        data = await processStudyRequest(text, source);
+      }
 
-        const data = await res.json();
-        if (res.ok) {
-          setOrbState('responding');
-          const spokenMessage = data.message || '';
-          if (speakerEnabled && spokenMessage) {
-            speechService.speak(spokenMessage, () => {
-              setOrbState('idle');
-            });
-          } else {
-            setOrbState('idle');
-          }
-        } else {
-          setErrorMsg(data.detail || 'Error processing voice study request.');
-          setOrbState('error');
-        }
+      setOrbState('responding');
+      const spokenMessage = data?.message || data?.answer || '';
+      if (speakerEnabled && spokenMessage) {
+        speechService.speak(spokenMessage, () => {
+          setOrbState('idle');
+        });
+      } else {
+        setOrbState('idle');
       }
     } catch (err) {
       console.error('Voice Orb submission error:', err);
-      setErrorMsg('Failed to process request. Please try typing your question.');
+      setErrorMsg(err.message || 'Failed to process study request.');
       setOrbState('error');
     } finally {
       setIsProcessing(false);

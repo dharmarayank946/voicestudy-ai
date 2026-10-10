@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mic, Send, Volume2, VolumeX, Cpu, Layers, BookOpen, Sparkles, CheckCircle, RefreshCw } from 'lucide-react';
 import { speechService } from '../services/speech';
+import { processStudyRequest } from '../services/api';
 import OmiStatusCard from './OmiStatusCard';
 
 export default function StudyView() {
@@ -29,37 +30,16 @@ export default function StudyView() {
     const newHistory = [...conversationHistory, { role: 'user', content: textToSend }];
 
     try {
-      const res = await fetch('/api/study', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transcript: textToSend,
-          source: 'text_fallback',
-          device_id: 'browser_input',
-          history: newHistory
-        })
-      });
+      const data = await processStudyRequest(textToSend, 'text_fallback');
+      setResponseData(data);
+      const assistantMessage = data.message || '';
+      setConversationHistory([
+        ...newHistory,
+        { role: 'assistant', content: assistantMessage }
+      ]);
 
-      const data = await res.json();
-      if (res.ok) {
-        setResponseData(data);
-        const assistantMessage = data.message || '';
-        setConversationHistory([
-          ...newHistory,
-          { role: 'assistant', content: assistantMessage }
-        ]);
-
-        if (speakerEnabled && assistantMessage) {
-          speechService.speak(assistantMessage);
-        }
-      } else {
-        setResponseData({
-          agent_executed: 'Error Handler',
-          intent: 'ERROR',
-          message: data.detail || 'Failed to process question. Please try again.',
-          response_type: 'error',
-          orchestration: { subject: 'General', topic: 'Error' }
-        });
+      if (speakerEnabled && assistantMessage) {
+        speechService.speak(assistantMessage);
       }
     } catch (err) {
       console.error('Study API call failed:', err);
