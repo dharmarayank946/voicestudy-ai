@@ -1,4 +1,4 @@
-import os
+﻿import os
 import uuid
 import logging
 from typing import List, Dict, Any, Optional
@@ -263,20 +263,14 @@ class QdrantMemoryService:
             logger.error(f"Failed to delete memory {memory_id}: {e}")
             return False
 
-    def get_stats(self) -> Dict[str, Any]:
-        """Get memory statistics."""
-        try:
-            collection_info = self.client.get_collection(self.collection_name)
-            points_count = collection_info.points_count
-        except Exception:
-            points_count = 0
-            
-        memories = self.get_all_memories(limit=100)
-        subjects = set(m.get("subject", "General") for m in memories)
-        topics = set(m.get("topic", "General") for m in memories)
+    def get_stats(self, uid_filter: Optional[str] = None) -> Dict[str, Any]:
+        """Get memory statistics with optional uid filtering."""
+        memories = self.get_all_memories(limit=1000, uid_filter=uid_filter)
+        subjects = set(m.get("subject", "General") for m in memories if m.get("subject"))
+        topics = set(m.get("topic", "General") for m in memories if m.get("topic"))
         
         return {
-            "total_memories": points_count,
+            "total_memories": len(memories),
             "total_subjects": len(subjects),
             "total_topics": len(topics),
             "subjects_list": sorted(list(subjects)),
