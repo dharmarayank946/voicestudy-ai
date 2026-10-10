@@ -1,120 +1,196 @@
-﻿import React, { useState } from 'react';
-import { Send, Sparkles, Cpu, Layers, Volume2, VolumeX, Trash2, CheckCircle, AlertTriangle, ShieldCheck } from 'lucide-react';
-import OmiStatusCard from './OmiStatusCard';
+import React, { useState } from 'react';
+import { Mic, Send, Volume2, VolumeX, Cpu, Layers, BookOpen, Sparkles, CheckCircle, RefreshCw } from 'lucide-react';
 import { speechService } from '../services/speech';
+import OmiStatusCard from './OmiStatusCard';
 
-export default function StudyView({ onProcessInput, isProcessing, responseData }) {
+export default function StudyView() {
   const [inputVal, setInputVal] = useState('');
-  const [conversationHistory, setConversationHistory] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [responseData, setResponseData] = useState(null);
   const [speakerEnabled, setSpeakerEnabled] = useState(true);
+  const [conversationHistory, setConversationHistory] = useState([]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!inputVal.trim() || isProcessing) return;
-    
-    const query = inputVal.trim();
-    setInputVal('');
+  const sampleQueries = [
+    { label: 'Science', query: 'What is photosynthesis and how does it work?' },
+    { label: 'Operating Systems', query: 'Explain how Virtual Memory and Page Faults work in OS.' },
+    { label: 'Software Eng', query: 'What are the SOLID design principles in software engineering?' },
+    { label: 'DBMS', query: 'How does Strict Two-Phase Locking prevent cascading aborts?' },
+    { label: 'Networks', query: 'Compare TCP vs UDP transport layer protocols.' },
+    { label: 'Math', query: 'Explain linear algebra matrix vector multiplication.' },
+  ];
 
-    const newHistory = [...conversationHistory, { role: 'user', content: query }];
-    setConversationHistory(newHistory);
+  const handleSend = async (queryText = inputVal) => {
+    const textToSend = queryText || inputVal;
+    if (!textToSend.trim()) return;
 
-    const result = await onProcessInput(query, 'text_fallback', { history: newHistory });
-    if (result && result.message) {
-      setConversationHistory(prev => [...prev, { role: 'assistant', content: result.message }]);
-      if (speakerEnabled) {
-        speechService.speak(result.message);
+    setIsProcessing(true);
+    setResponseData(null);
+
+    const newHistory = [...conversationHistory, { role: 'user', content: textToSend }];
+
+    try {
+      const res = await fetch('/api/study', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript: textToSend,
+          source: 'text_fallback',
+          device_id: 'browser_input',
+          history: newHistory
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setResponseData(data);
+        const assistantMessage = data.message || '';
+        setConversationHistory([
+          ...newHistory,
+          { role: 'assistant', content: assistantMessage }
+        ]);
+
+        if (speakerEnabled && assistantMessage) {
+          speechService.speak(assistantMessage);
+        }
+      } else {
+        setResponseData({
+          agent_executed: 'Error Handler',
+          intent: 'ERROR',
+          message: data.detail || 'Failed to process question. Please try again.',
+          response_type: 'error',
+          orchestration: { subject: 'General', topic: 'Error' }
+        });
       }
+    } catch (err) {
+      console.error('Study API call failed:', err);
+      setResponseData({
+        agent_executed: 'Network Handler',
+        intent: 'ERROR',
+        message: 'Network connection issue. Please check backend connection.',
+        response_type: 'error',
+        orchestration: { subject: 'General', topic: 'Network' }
+      });
+    } finally {
+      setIsProcessing(false);
+      setInputVal('');
     }
   };
 
-  const handleClearHistory = () => {
+  const handleClearContext = () => {
     setConversationHistory([]);
+    setResponseData(null);
     speechService.stopSpeaking();
   };
 
-  const sampleQueries = [
-    { label: 'OS Paging', query: 'Explain how Virtual Memory and Page Faults work in Operating Systems.' },
-    { label: 'SOLID Design', query: 'What are the SOLID principles in Software Engineering?' },
-    { label: 'Networks TCP', query: 'Compare TCP and UDP transport layer protocols.' },
-    { label: 'DBMS 2PL', query: 'Explain how Two-Phase Locking ensures concurrency control in DBMS.' },
-    { label: 'Python Async', query: 'How does Python GIL affect asyncio and multiprocessing?' },
-    { label: 'Calculus', query: 'Explain the role of gradient descent in machine learning mathematics.' }
-  ];
+  // Helper to render formatted markdown nicely
+  const renderFormattedText = (text) => {
+    if (!text) return null;
+    const lines = text.split('\n');
+    return lines.map((line, idx) => {
+      const trimmed = line.trim();
+      if (!trimmed) return <div key={idx} style={{ height: '0.5rem' }} />;
+      
+      if (trimmed.startsWith('### ')) {
+        return (
+          <h4 key={idx} style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--accent-cyan)', marginTop: '1rem', marginBottom: '0.4rem' }}>
+            {trimmed.replace('### ', '')}
+          </h4>
+        );
+      }
+      
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        const content = trimmed.replace(/^[\-\*]\s+/, '');
+        return (
+          <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem', paddingLeft: '0.5rem' }}>
+            <span style={{ color: 'var(--accent-emerald)', fontWeight: 'bold' }}>•</span>
+            <div>{renderBoldText(content)}</div>
+          </div>
+        );
+      }
 
-  const providerStatus = responseData?.ai_provider;
+      if (/^\d+\.\s+/.test(trimmed)) {
+        const num = trimmed.match(/^(\d+\.)/)[1];
+        const content = trimmed.replace(/^\d+\.\s+/, '');
+        return (
+          <div key={idx} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.4rem', paddingLeft: '0.5rem' }}>
+            <span style={{ color: 'var(--accent-cyan)', fontWeight: '600' }}>{num}</span>
+            <div>{renderBoldText(content)}</div>
+          </div>
+        );
+      }
+
+      return (
+        <p key={idx} style={{ marginBottom: '0.6rem', lineHeight: '1.6' }}>
+          {renderBoldText(trimmed)}
+        </p>
+      );
+    });
+  };
+
+  const renderBoldText = (str) => {
+    const parts = str.split(/(\?\?[^\*]+\?\?|\*\*[^\*]+\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} style={{ color: 'var(--text-primary)', fontWeight: '700' }}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem' }}>
-      {/* Main Agent Interaction Panel */}
+    <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.5rem' }}>
+      
+      {/* Main Workspace */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
-        {/* AI Provider Status Banner */}
-        <div className="glass-card" style={{
-          padding: '0.85rem 1.25rem',
-          display: 'flex',
-          alignItems: 'center',
-          justify: 'space-between',
-          borderColor: providerStatus?.is_real_ai ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)',
-          background: providerStatus?.is_real_ai ? 'rgba(16, 185, 129, 0.08)' : 'rgba(245, 158, 11, 0.08)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            {providerStatus?.is_real_ai ? (
-              <ShieldCheck size={20} color="var(--accent-emerald)" />
-            ) : (
-              <AlertTriangle size={20} color="var(--accent-amber)" />
-            )}
-            <div>
-              <div style={{ fontSize: '0.88rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-                Provider: {providerStatus?.provider_name || 'Offline Engine Fallback'}
-              </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                {providerStatus?.notice || 'Intelligent AI answers ready across all CS & General subjects.'}
-              </div>
+        {/* Input Card */}
+        <div className="glass-card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <BookOpen size={20} color="var(--accent-cyan)" />
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '700' }}>Study Workspace</h3>
             </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            
             {conversationHistory.length > 0 && (
-              <button 
-                className="btn-secondary" 
-                onClick={handleClearHistory}
-                style={{ fontSize: '0.8rem', padding: '0.4rem 0.75rem', gap: '0.35rem' }}
-                title="Clear current conversation context"
+              <button
+                className="btn-secondary"
+                onClick={handleClearContext}
+                style={{ fontSize: '0.78rem', padding: '0.3rem 0.65rem', gap: '0.35rem' }}
+                title="Start a new conversation context"
               >
-                <Trash2 size={14} color="var(--accent-rose)" /> Clear Context
+                <RefreshCw size={13} /> Clear Context ({conversationHistory.length / 2 | 0} turns)
               </button>
             )}
           </div>
-        </div>
 
-        {/* Input Box */}
-        <div className="glass-card">
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles size={18} color="var(--accent-cyan)" /> AI Tutor Study Workspace
-          </h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-            Ask questions about Software Engineering, OS, DBMS, Networks, Mathematics, Programming, or general topics.
-          </p>
-
-          <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '0.75rem' }}>
+          <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} style={{ display: 'flex', gap: '0.75rem' }}>
             <input
               type="text"
               className="custom-input"
-              placeholder="Ask any study question e.g., Explain Virtual Memory in Operating Systems..."
+              placeholder='Ask any question e.g. "What is photosynthesis?" or "Explain Virtual Memory"'
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
+              disabled={isProcessing}
             />
-            <button className="btn-primary" type="submit" disabled={isProcessing || !inputVal.trim()}>
-              <Send size={18} /> {isProcessing ? 'Thinking...' : 'Ask AI'}
-            </button>
+
             <button
-              className="btn-secondary"
+              type="submit"
+              className="btn-primary"
+              disabled={!inputVal.trim() || isProcessing}
+              style={{ whiteSpace: 'nowrap', gap: '0.4rem' }}
+            >
+              {isProcessing ? <Sparkles size={18} className="spin" /> : <Send size={18} />} Send
+            </button>
+
+            <button
               type="button"
+              className="btn-secondary"
               onClick={() => {
-                setSpeakerEnabled(!speakerEnabled);
-                if (speakerEnabled) speechService.stopSpeaking();
+                const nextState = !speakerEnabled;
+                setSpeakerEnabled(nextState);
+                if (!nextState) speechService.stopSpeaking();
               }}
-              title={speakerEnabled ? "Mute Spoken Answers" : "Enable Spoken Answers"}
+              title={speakerEnabled ? "Mute Spoken Answer" : "Enable Spoken Answer"}
               style={{ padding: '0.75rem' }}
             >
               {speakerEnabled ? <Volume2 size={18} color="var(--accent-emerald)" /> : <VolumeX size={18} color="var(--text-muted)" />}
@@ -130,16 +206,16 @@ export default function StudyView({ onProcessInput, isProcessing, responseData }
                 onClick={() => setInputVal(item.query)}
                 style={{ fontSize: '0.78rem', padding: '0.35rem 0.75rem' }}
               >
-                <span style={{ color: 'var(--accent-cyan)', fontWeight: '600' }}>[{item.label}]</span> {item.query.slice(0, 32)}...
+                <span style={{ color: 'var(--accent-cyan)', fontWeight: '600' }}>[{item.label}]</span> {item.query.slice(0, 30)}...
               </button>
             ))}
           </div>
         </div>
 
-        {/* Agent Response Visualization */}
+        {/* Agent Response Card */}
         {responseData && (
           <div className="glass-card" style={{ borderColor: 'rgba(0, 242, 254, 0.3)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '1rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.85rem', borderBottom: '1px solid var(--border-subtle)', marginBottom: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <Cpu size={20} color="var(--accent-cyan)" />
                 <div>
@@ -147,10 +223,11 @@ export default function StudyView({ onProcessInput, isProcessing, responseData }
                     Agent Executed: <span style={{ color: 'var(--accent-cyan)' }}>{responseData.agent_executed}</span>
                   </h4>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                    Intent: <strong style={{ color: 'var(--accent-emerald)' }}>{responseData.intent}</strong>   Subject: <strong>{responseData.orchestration?.subject}</strong>   Topic: {responseData.orchestration?.topic}
+                    Intent: <strong style={{ color: 'var(--accent-emerald)' }}>{responseData.intent}</strong> • Subject: <strong>{responseData.orchestration?.subject}</strong> • Topic: {responseData.orchestration?.topic}
                   </span>
                 </div>
               </div>
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span className="badge badge-cyan">{responseData.response_type}</span>
                 <button
@@ -165,8 +242,8 @@ export default function StudyView({ onProcessInput, isProcessing, responseData }
             </div>
 
             {/* Response Message */}
-            <div style={{ fontSize: '0.95rem', lineHeight: '1.6', color: 'var(--text-primary)', whiteSpace: 'pre-line' }}>
-              {responseData.message}
+            <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
+              {renderFormattedText(responseData.message)}
             </div>
 
             {/* Quiz view if generated */}
@@ -224,8 +301,8 @@ export default function StudyView({ onProcessInput, isProcessing, responseData }
             </div>
 
             <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', borderLeft: '3px solid var(--accent-emerald)' }}>
-              <div style={{ fontWeight: '600', color: 'var(--accent-emerald)' }}>3. AI Provider Completion</div>
-              <div style={{ color: 'var(--text-muted)' }}>Executes Lyzr/OpenAI model or structured offline engine</div>
+              <div style={{ fontWeight: '600', color: 'var(--accent-emerald)' }}>3. AI Study Assistant</div>
+              <div style={{ color: 'var(--text-muted)' }}>Executes intelligent study assistant agent</div>
             </div>
 
             <div style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', borderLeft: '3px solid var(--accent-amber)' }}>

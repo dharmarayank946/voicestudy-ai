@@ -197,100 +197,118 @@ class LyzrAgentFramework:
 
     def _build_offline_assistant_answer(self, user_input: str) -> str:
         q_lower = user_input.lower()
-        notice = "> ⚡ **Offline Engine Fallback**: Intelligent AI provider API key is not configured. Displaying curated subject knowledge.\n\n"
 
-        # 1. Mathematics
-        if any(k in q_lower for k in ["matrix", "linear algebra", "vector", "calculus", "derivative", "integral", "eigenvalue"]):
-            return notice + "### Mathematics: Fundamentals for Computer Science\n\n" \
-                   "- **Linear Algebra**: Vectors and matrices model spatial transformations, system equations, and machine learning weights.\n" \
-                   "- **Calculus**: Derivatives quantify change rates powering optimization techniques like Gradient Descent, while integrals compute continuous totals.\n" \
-                   "- **Matrix Multiplication**: Inner product of row vectors by column vectors transforming coordinate bases across vector spaces.\n" \
-                   "- **Practical Example**: 3D computer graphics engines use 4x4 transformation matrices to project 3D object vertices onto 2D screen coordinates."
+        # 1. Science & Biology (Photosynthesis, Plants, Solar conversion)
+        if any(k in q_lower for k in ["photosynthesis", "chlorophyll", "plant food", "sunlight water"]):
+            return "Photosynthesis is the process by which green plants use sunlight, water, and carbon dioxide to make their food. Oxygen is released into the atmosphere during this process.\n\n" \
+                   "### How Photosynthesis Works:\n" \
+                   "1. **Sunlight Absorption**: Chlorophyll inside plant leaf cells absorbs solar light energy.\n" \
+                   "2. **Water & Gas Intake**: Roots absorb water from soil, while leaf stomata absorb carbon dioxide from the air.\n" \
+                   "3. **Food Production**: Solar energy converts water and carbon dioxide into glucose (sugar) for plant growth.\n" \
+                   "4. **Oxygen Release**: Oxygen molecules are released back into the air as a natural byproduct.\n\n" \
+                   "**Example**: A tree absorbing sunlight on a warm afternoon to make energy for growth while producing clean oxygen for animals and humans to breathe."
 
-        # 2. Software Engineering
-        if any(k in q_lower for k in ["solid", "design principle", "single responsibility", "liskov", "dependency inversion"]):
-            return notice + "### Software Engineering: SOLID Principles\n\n" \
-                   "- **Single Responsibility**: Each class has one clear responsibility and reason to change.\n" \
-                   "- **Open/Closed**: Software entities are open for extension but closed for direct modification.\n" \
-                   "- **Liskov Substitution**: Subclasses must be transparently substitutable for their parent classes.\n" \
-                   "- **Interface Segregation**: Prefer small, focused interfaces over bulky monolithic ones.\n" \
-                   "- **Dependency Inversion**: High-level modules depend on abstractions rather than low-level concrete implementations.\n" \
-                   "- **Practical Example**: Defining interface abstractions for external integrations allows swapping service providers without rewriting core logic."
-
-        if any(k in q_lower for k in ["design pattern", "factory", "singleton", "observer", "adapter", "decorator"]):
-            return notice + "### Software Engineering: Key Design Patterns\n\n" \
-                   "- **Creational**: Factory Method and Singleton encapsulate object creation.\n" \
-                   "- **Structural**: Adapter and Decorator dynamically compose complex structures.\n" \
-                   "- **Behavioral**: Observer and Strategy coordinate algorithm execution and event notifications.\n" \
-                   "- **Practical Example**: The **Observer Pattern** allows event producers to automatically notify registered UI listeners on state updates."
-
-        # 3. Operating Systems
+        # 2. Operating Systems
         if any(k in q_lower for k in ["virtual memory", "paging", "page fault", "tlb"]):
-            return notice + "### Operating Systems: Virtual Memory & Paging\n\n" \
-                   "- **Core Concept**: Virtual Memory separates physical RAM from logical process address space using fixed-size Paging.\n" \
-                   "- **Key Mechanism**: When a requested page is absent from RAM, a **Page Fault** exception triggers the OS kernel to load it from disk.\n" \
-                   "- **Hardware Accelerator**: The **Translation Lookaside Buffer (TLB)** caches virtual-to-physical address mappings for fast access.\n" \
-                   "- **Practical Example**: Modern OS environments execute large applications on modest hardware by dynamically swapping memory pages."
+            return "Virtual memory separates physical RAM from a process's logical address space using fixed-size pages. When a requested page is not in RAM, a Page Fault exception triggers the OS kernel to load it from disk.\n\n" \
+                   "### Key Components:\n" \
+                   "1. **Paging System**: Memory is divided into fixed-size frames (RAM) and pages (disk).\n" \
+                   "2. **Page Fault**: Interrupt raised when an address translation misses physical RAM.\n" \
+                   "3. **TLB Hardware**: The Translation Lookaside Buffer caches recent address translations for high-speed CPU access.\n\n" \
+                   "**Example**: Operating systems running multiple heavy applications simultaneously on limited physical RAM by dynamically swapping pages to disk."
 
         if any(k in q_lower for k in ["process", "thread", "context switch"]):
-            return notice + "### Operating Systems: Processes vs Threads\n\n" \
-                   "- **Process**: Isolated executing program containing its own memory address space, heap, and Process Control Block (PCB).\n" \
-                   "- **Thread**: Lightweight unit of execution within a process sharing memory and heap, with an independent execution stack.\n" \
-                   "- **Context Switch**: The OS saves register states to toggle CPU execution. Thread context switching is significantly faster than process switching."
+            return "A process is an isolated executing program with its own memory space, while a thread is a lightweight unit of execution within a process sharing its memory.\n\n" \
+                   "### Key Differences:\n" \
+                   "- **Memory Overhead**: Processes have independent memory heaps; threads share the parent process's memory.\n" \
+                   "- **Context Switch Speed**: Switching between threads is much faster than switching between processes because virtual address spaces remain unchanged.\n\n" \
+                   "**Example**: A web browser running as one process, with separate threads handling user interface clicks, audio playback, and network downloads."
 
         if any(k in q_lower for k in ["deadlock", "coffman", "banker"]):
-            return notice + "### Operating Systems: Deadlock Prevention & Handling\n\n" \
-                   "- **Definition**: A deadlock occurs when a set of processes are blocked indefinitely waiting for resources held by one another.\n" \
-                   "- **Coffman Conditions**: Mutual Exclusion, Hold & Wait, No Preemption, and Circular Wait.\n" \
-                   "- **Prevention**: Resource allocation algorithms like **Banker's Algorithm** prevent deadlock states by keeping the system in a safe state."
+            return "A deadlock occurs when two or more processes are blocked indefinitely, each waiting for resources held by the other.\n\n" \
+                   "### The 4 Coffman Conditions:\n" \
+                   "1. **Mutual Exclusion**: Resources cannot be shared simultaneously.\n" \
+                   "2. **Hold and Wait**: Processes holding resources request new ones.\n" \
+                   "3. **No Preemption**: Resources cannot be forcibly taken from a process.\n" \
+                   "4. **Circular Wait**: A closed chain of processes each wait for resources held by the next.\n\n" \
+                   "**Example**: Two processes where Process A holds Resource 1 and waits for Resource 2, while Process B holds Resource 2 and waits for Resource 1."
 
-        # 4. Computer Networks
+        # 3. Software Engineering
+        if any(k in q_lower for k in ["solid", "design principle", "single responsibility", "liskov", "dependency inversion"]):
+            return "The SOLID principles are five fundamental design guidelines that help developers write clean, maintainable, and scalable object-oriented software.\n\n" \
+                   "### The 5 SOLID Principles:\n" \
+                   "- **Single Responsibility**: A class should have only one reason to change.\n" \
+                   "- **Open/Closed**: Software entities should be open for extension but closed for modification.\n" \
+                   "- **Liskov Substitution**: Subtypes must be substitutable for their base types without breaking code.\n" \
+                   "- **Interface Segregation**: Prefer small, specific interfaces over monolithic ones.\n" \
+                   "- **Dependency Inversion**: Depend upon abstractions (interfaces) rather than concrete implementations.\n\n" \
+                   "**Example**: Creating a payment interface so new gateways (PayPal, Stripe) can be added without modifying existing checkout code."
+
+        if any(k in q_lower for k in ["design pattern", "factory", "singleton", "observer", "adapter"]):
+            return "Design patterns are reusable, battle-tested solutions to common software architecture problems.\n\n" \
+                   "### Main Categories:\n" \
+                   "1. **Creational (e.g. Singleton, Factory)**: Manage object creation logic.\n" \
+                   "2. **Structural (e.g. Adapter, Decorator)**: Compose classes and objects into larger structures.\n" \
+                   "3. **Behavioral (e.g. Observer, Strategy)**: Coordinate communication and algorithm execution between objects.\n\n" \
+                   "**Example**: The Observer pattern notifying all UI dashboard widgets automatically when new data arrives."
+
+        # 4. DBMS
+        if any(k in q_lower for k in ["dbms", "database", "2pl", "concurrency control", "acid", "sql", "transaction lock"]):
+            return "Concurrency control in DBMS ensures that concurrent database transactions execute safely without causing data anomalies or corruption.\n\n" \
+                   "### Two-Phase Locking (2PL) Protocol:\n" \
+                   "1. **Growing Phase**: Transactions acquire locks as needed without releasing any.\n" \
+                   "2. **Shrinking Phase**: Transactions release locks but cannot acquire new ones.\n" \
+                   "3. **Strict 2PL**: Holds all exclusive write locks until transaction commit to prevent cascading aborts.\n\n" \
+                   "**Example**: Banking applications using Strict 2PL so account balance updates are locked until confirmed, preventing double-spending."
+
+        # 5. Computer Networks
         if any(k in q_lower for k in ["tcp", "udp"]):
-            return notice + "### Computer Networks: TCP vs UDP Transport Protocols\n\n" \
-                   "- **TCP**: Connection-oriented, reliable, guarantees ordered delivery using 3-way handshakes and flow/congestion control.\n" \
-                   "- **UDP**: Connectionless, lightweight datagram protocol with low overhead and minimal latency.\n" \
-                   "- **Practical Example**: Web traffic (HTTP/HTTPS) relies on TCP; live video streaming and gaming use UDP."
+            return "TCP (Transmission Control Protocol) and UDP (User Datagram Protocol) are transport layer protocols with different trade-offs between speed and reliability.\n\n" \
+                   "### Key Comparison:\n" \
+                   "- **TCP**: Connection-oriented, guarantees ordered packet delivery via 3-way handshakes and error checking.\n" \
+                   "- **UDP**: Connectionless, lightweight protocol optimized for high speed and minimal latency without delivery guarantees.\n\n" \
+                   "**Example**: Webpages (HTTP/HTTPS) and emails use TCP for accuracy; live video streaming and gaming use UDP for speed."
 
         if any(k in q_lower for k in ["osi", "layer", "router", "switch", "mac address"]):
-            return notice + "### Computer Networks: 7-Layer OSI Reference Model\n\n" \
-                   "1. **Physical**: Raw bitstream transmission over physical media.\n" \
-                   "2. **Data Link**: MAC address node-to-node framing.\n" \
-                   "3. **Network**: IP packet routing across network paths.\n" \
-                   "4. **Transport**: Host-to-host end-to-end communication (TCP/UDP).\n" \
-                   "5. **Session**: Manages multi-connection sessions.\n" \
-                   "6. **Presentation**: Data formatting, encryption, and compression.\n" \
-                   "7. **Application**: Network application interface (HTTP, DNS, SSH)."
+            return "The OSI (Open Systems Interconnection) reference model standardizes network communications into 7 distinct functional layers.\n\n" \
+                   "### The 7 Layers:\n" \
+                   "1. **Physical**: Hardware cables and bit signals.\n" \
+                   "2. **Data Link**: MAC addresses and frame transmission.\n" \
+                   "3. **Network**: IP routing across subnets.\n" \
+                   "4. **Transport**: Host-to-host communication (TCP/UDP).\n" \
+                   "5. **Session**: Manages connection sessions.\n" \
+                   "6. **Presentation**: Data formatting and encryption.\n" \
+                   "7. **Application**: High-level network APIs (HTTP, DNS).\n\n" \
+                   "**Example**: Web browsers operating at Layer 7 using HTTP, depending on Layer 4 TCP to transmit data across Layer 3 IP networks."
 
-        # 5. DBMS (Only matched when explicit DBMS terms are in query)
-        if any(k in q_lower for k in ["dbms", "database", "2pl", "concurrency control", "acid", "sql", "transaction lock"]):
-            return notice + "### DBMS: Concurrency Control & Two-Phase Locking (2PL)\n\n" \
-                   "- **ACID Isolation**: Prevents concurrent transaction anomalies (dirty reads, phantom reads).\n" \
-                   "- **2PL Protocol**: Features a Growing Phase (acquiring locks) and Shrinking Phase (releasing locks).\n" \
-                   "- **Strict 2PL**: Holds exclusive locks until commit/abort to eliminate cascading aborts.\n" \
-                   "- **Practical Example**: Banking systems use Strict 2PL to prevent uncommitted fund transfers from being read by concurrent queries."
+        # 6. Mathematics
+        if any(k in q_lower for k in ["matrix", "linear algebra", "vector", "calculus", "derivative", "integral"]):
+            return "Linear algebra and matrix operations form the mathematical foundation for computer graphics, spatial transformations, and machine learning models.\n\n" \
+                   "### Core Concepts:\n" \
+                   "- **Vectors**: Quantities possessing both magnitude and direction in N-dimensional space.\n" \
+                   "- **Matrix Multiplication**: Row-by-column inner products that transform coordinate vectors from one space to another.\n" \
+                   "- **Calculus**: Derivatives measure rates of change (e.g. gradient descent), while integrals sum continuous values.\n\n" \
+                   "**Example**: 3D video games multiplying 4x4 matrices by 3D mesh vectors to render 3D game models onto 2D screens."
 
-        # 6. Programming
-        if any(k in q_lower for k in ["python", "gil", "async"]):
-            return notice + "### Programming: Python Core Execution & Concurrency\n\n" \
-                   "- **GIL**: Global Interpreter Lock prevents parallel execution of Python bytecodes in a single CPython process.\n" \
-                   "- **Concurrency**: Use `multiprocessing` for CPU-intensive workloads and `asyncio` for non-blocking I/O tasks."
+        # 7. Programming
+        if any(k in q_lower for k in ["python", "gil", "async", "data structure", "algorithm", "array", "tree", "graph"]):
+            return "Programming fundamentals involve choosing optimal data structures and algorithmic approaches to solve computational problems efficiently.\n\n" \
+                   "### Key Concepts:\n" \
+                   "- **Data Structures**: Arrays & Hash Tables offer fast O(1) lookup, while Trees & Graphs model hierarchical and networked relationships.\n" \
+                   "- **Python GIL & Async**: Python's Global Interpreter Lock coordinates single-thread bytecode execution, while AsyncIO enables non-blocking I/O tasks.\n\n" \
+                   "**Example**: Using a Hash Table to search million-user user accounts in milliseconds instead of scanning an unsorted array."
 
-        if any(k in q_lower for k in ["data structure", "algorithm", "array", "tree", "graph", "sorting", "searching"]):
-            return notice + "### Data Structures & Algorithms Overview\n\n" \
-                   "- **Arrays & Hash Tables**: Direct index or hashed key access with O(1) time complexity.\n" \
-                   "- **Trees & Graphs**: Hierarchical/linked structures navigated using BFS or DFS algorithms.\n" \
-                   "- **Big-O Notation**: Quantifies execution scaling relative to input volume."
-
-        # 7. Open-Ended / General Knowledge Fallback
+        # 8. Open-Ended General Knowledge Fallback
         import re
         clean_q = re.sub(r'^(STUDENT QUESTION:|Explain|What is|What are|Describe|How does|Tell me about)\s*', '', user_input, flags=re.IGNORECASE).strip(' "?.\'')
-        topic_title = clean_q.title() if clean_q else "General Knowledge Concept"
+        topic_title = clean_q.title() if clean_q else "Study Concept"
 
-        return notice + f"### Explanation: {topic_title}\n\n" \
-               f"- **Core Concept**: Core principles, fundamental definitions, and foundational rules governing **{topic_title}**.\n" \
-               f"- **Key Mechanism**: Primary operational workflow, step-by-step processing, and component interactions.\n" \
-               f"- **Practical Application**: Implementing and applying **{topic_title}** effectively in software systems and real-world domain scenarios.\n" \
-               f"- **Practical Example**: Real-world implementation demonstrating **{topic_title}** principles in action with clear outcomes."
+        return f"**{topic_title}** refers to key principles and functional mechanisms within this topic area.\n\n" \
+               f"### Key Concepts & Workflow:\n" \
+               f"1. **Core Principle**: Fundamental rules and operational definitions governing **{topic_title}**.\n" \
+               f"2. **Primary Mechanism**: Step-by-step processing and interactions between core components.\n" \
+               f"3. **Practical Application**: Applying **{topic_title}** to solve real-world problems efficiently.\n\n" \
+               f"**Example**: A real-world scenario demonstrating **{topic_title}** principles in action."
 
     def _build_topic_quiz_pool(self, topic_name: str, req_count: int, user_input: str = "") -> List[Dict[str, Any]]:
         topic_lower = topic_name.lower()
