@@ -3,6 +3,9 @@ const getApiBaseUrl = () => {
   if (envUrl) {
     return envUrl.replace(/\/$/, '') + (envUrl.endsWith('/api') ? '' : '/api');
   }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return '/api';
+  }
   return 'http://localhost:8000/api';
 };
 
@@ -27,23 +30,42 @@ export async function fetchHealth() {
 
 
 export async function processStudyRequest(transcript, source = 'web_speech', subjectOverride = null, topicOverride = null) {
-  const response = await fetch(`${API_BASE_URL}/study`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      transcript,
-      source,
-      subject_override: subjectOverride,
-      topic_override: topicOverride,
-      device_id: source === 'omi' ? 'omi_wearable_01' : 'browser_mic'
-    })
-  });
-  
-  if (!response.ok) {
-    const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.detail || 'Failed to process study request.');
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}/study`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transcript,
+        source,
+        subject_override: subjectOverride,
+        topic_override: topicOverride,
+        device_id: source === 'omi' ? 'omi_wearable_01' : 'browser_mic'
+      })
+    });
+  } catch (netErr) {
+    try {
+      response = await fetch('/api/study', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript, source })
+      });
+    } catch (e) {
+      throw new Error('Unable to connect to backend server. Please verify backend server is running on port 8000.');
+    }
   }
-  return await response.json();
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (jsonErr) {
+    throw new Error('Backend returned invalid response format.');
+  }
+
+  if (!response.ok) {
+    throw new Error(data.detail || data.message || 'Failed to process study request.');
+  }
+  return data;
 }
 
 export async function saveMemory(text, subject = 'General', topic = 'Study Topic', memoryType = 'voice_note') {
