@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, Send, Sparkles, Volume2, VolumeX, AlertCircle } from 'lucide-react';
+﻿import React, { useState, useEffect } from 'react';
+import { Mic, MicOff, Send, Sparkles, Volume2, VolumeX, AlertCircle, Square } from 'lucide-react';
 import { speechService } from '../services/speech';
 
 export default function VoiceOrb({ onProcessInput, isProcessing, responseData }) {
@@ -7,6 +7,7 @@ export default function VoiceOrb({ onProcessInput, isProcessing, responseData })
   const [textInput, setTextInput] = useState('');
   const [transcriptText, setTranscriptText] = useState('');
   const [speakerEnabled, setSpeakerEnabled] = useState(true);
+  const [speechRate, setSpeechRate] = useState(1.0);
   const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function VoiceOrb({ onProcessInput, isProcessing, responseData })
           }
         },
         onError: (err) => {
-          setErrorMsg(`Voice recognition error: ${err}`);
+          setErrorMsg(`Voice recognition note: ${err}`);
           setOrbState('idle');
         },
         onEnd: () => {
@@ -59,7 +60,10 @@ export default function VoiceOrb({ onProcessInput, isProcessing, responseData })
 
   const handleSend = (textToSend) => {
     const text = textToSend || textInput;
-    if (!text || !text.trim()) return;
+    if (!text || !text.trim()) {
+      setErrorMsg("Please speak clearly into the microphone or type a query before sending.");
+      return;
+    }
     
     setErrorMsg(null);
     onProcessInput(text.trim(), 'web_speech');
@@ -67,26 +71,36 @@ export default function VoiceOrb({ onProcessInput, isProcessing, responseData })
     setTranscriptText('');
   };
 
+  const handleStopSpeech = () => {
+    speechService.stopSpeaking();
+    setOrbState('idle');
+  };
+
+  const handleRateChange = (rate) => {
+    setSpeechRate(rate);
+    speechService.setRate(rate);
+  };
+
   const promptSuggestions = [
-    "Remember that I studied DBMS concurrency control today.",
-    "What did I study about concurrency control?",
-    "Explain what I studied yesterday.",
-    "Give me five revision questions from my recent study.",
-    "What topics have I studied recently?",
-    "Compare what I learned about TCP and UDP."
+    "Explain how Virtual Memory and Page Faults work in Operating Systems.",
+    "What are the SOLID principles in Software Engineering?",
+    "Compare TCP vs UDP transport layer protocols.",
+    "How does Two-Phase Locking ensure concurrency control in DBMS?",
+    "What is the difference between processes and threads?",
+    "How does Python GIL affect asyncio and multiprocessing?"
   ];
 
   return (
     <div className="orb-container">
       {/* Dynamic Title */}
       <h2 style={{ fontSize: '1.6rem', fontWeight: '700', color: 'var(--text-primary)', textAlign: 'center', marginBottom: '0.25rem' }}>
-        How can I help you study?
+        VoiceStudy AI Tutor
       </h2>
       <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '1.5rem' }}>
-        Speak naturally or select a prompt below
+        Speak naturally about any subject or select a prompt below
       </p>
 
-      {/* Voice Orb Area */}
+      {/* Voice Orb Interactive Element */}
       <div className="voice-orb-wrapper" onClick={toggleListening}>
         <div className={`orb-ring orb-ring-1`} />
         <div className={`orb-ring orb-ring-2`} />
@@ -111,25 +125,21 @@ export default function VoiceOrb({ onProcessInput, isProcessing, responseData })
         </div>
       </div>
 
-      {/* State Text Label */}
-      <div style={{ textAlign: 'center', marginBottom: '1.5rem', minHeight: '36px' }}>
+      {/* Real-time Spoken Transcript Display */}
+      <div style={{ textAlign: 'center', marginBottom: '1.5rem', minHeight: '36px', maxWidth: '600px' }}>
         <p style={{ 
           fontSize: '0.95rem', 
           fontWeight: '600', 
           color: orbState === 'listening' ? 'var(--accent-cyan)' :
                  orbState === 'processing' ? 'var(--accent-purple)' :
-                 orbState === 'remembering' ? 'var(--accent-emerald)' :
-                 orbState === 'thinking' ? 'var(--accent-amber)' :
                  orbState === 'responding' ? 'var(--accent-emerald)' :
                  orbState === 'error' ? 'var(--accent-rose)' : 'var(--text-secondary)'
         }}>
-          {orbState === 'listening' && (transcriptText || 'Listening... Speak your study note or question')}
-          {orbState === 'processing' && 'Processing... Classifying Intent'}
-          {orbState === 'remembering' && 'Remembering... Storing to Qdrant Persistent Vector Memory'}
-          {orbState === 'thinking' && 'Thinking... Lyzr Agents Reasoning over Retrieved Memory'}
-          {orbState === 'responding' && 'Responding... VoiceStudy AI Output Ready'}
+          {orbState === 'listening' && (transcriptText ? `Transcript: "${transcriptText}"` : 'Listening... Speak your study question')}
+          {orbState === 'processing' && 'AI Thinking... Classifying Intent & Subject'}
+          {orbState === 'responding' && 'Voice AI Responding... Spoken Answer Active'}
           {orbState === 'error' && (errorMsg || 'Error Encountered')}
-          {orbState === 'idle' && 'Ready | Tap Orb to Speak or send via Omi Webhook'}
+          {orbState === 'idle' && 'Ready | Tap Orb to Speak or Type Query Below'}
         </p>
       </div>
 
@@ -152,12 +162,46 @@ export default function VoiceOrb({ onProcessInput, isProcessing, responseData })
         </div>
       )}
 
+      {/* Controls Bar: Voice Speed & Mute / Stop */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+          <span>Speed:</span>
+          {[0.8, 1.0, 1.2, 1.5].map((rate) => (
+            <button
+              key={rate}
+              onClick={() => handleRateChange(rate)}
+              style={{
+                padding: '0.2rem 0.5rem',
+                fontSize: '0.78rem',
+                borderRadius: '6px',
+                border: speechRate === rate ? '1px solid var(--accent-cyan)' : '1px solid var(--border-subtle)',
+                background: speechRate === rate ? 'rgba(0, 242, 254, 0.15)' : 'transparent',
+                color: speechRate === rate ? 'var(--accent-cyan)' : 'var(--text-muted)',
+                cursor: 'pointer'
+              }}
+            >
+              {rate}x
+            </button>
+          ))}
+        </div>
+
+        {orbState === 'responding' && (
+          <button
+            className="btn-secondary"
+            onClick={handleStopSpeech}
+            style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', gap: '0.35rem', color: 'var(--accent-rose)' }}
+          >
+            <Square size={14} /> Stop Speaking
+          </button>
+        )}
+      </div>
+
       {/* Text Input Fallback Bar */}
       <div style={{ display: 'flex', gap: '0.75rem', width: '100%', maxWidth: '640px', marginBottom: '2rem' }}>
         <input
           type="text"
           className="custom-input"
-          placeholder='Or type e.g., "Remember that I studied DBMS concurrency control today"'
+          placeholder='Type any question e.g. "Explain SOLID principles in Software Engineering"'
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
@@ -178,7 +222,7 @@ export default function VoiceOrb({ onProcessInput, isProcessing, responseData })
             setSpeakerEnabled(!speakerEnabled);
             if (speakerEnabled) speechService.stopSpeaking();
           }}
-          title={speakerEnabled ? "Mute Voice Response" : "Enable Voice Response"}
+          title={speakerEnabled ? "Mute Voice Output" : "Enable Voice Output"}
           style={{ padding: '0.75rem' }}
         >
           {speakerEnabled ? <Volume2 size={18} color="var(--accent-emerald)" /> : <VolumeX size={18} color="var(--text-muted)" />}
@@ -188,7 +232,7 @@ export default function VoiceOrb({ onProcessInput, isProcessing, responseData })
       {/* Sample Prompt Chips */}
       <div style={{ width: '100%', maxWidth: '780px' }}>
         <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600', marginBottom: '0.75rem', textAlign: 'center' }}>
-          Try these voice examples
+          Multidisciplinary Sample Questions
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
           {promptSuggestions.map((prompt, idx) => (
@@ -205,7 +249,7 @@ export default function VoiceOrb({ onProcessInput, isProcessing, responseData })
                 background: 'rgba(15, 22, 35, 0.6)'
               }}
             >
-              💬 "{prompt}"
+              💡 "{prompt}"
             </button>
           ))}
         </div>

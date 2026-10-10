@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
@@ -7,6 +7,7 @@ from backend.agents.orchestrator import orchestrator_agent
 from backend.agents.memory_agent import study_memory_agent
 from backend.agents.assistant_agent import study_assistant_agent
 from backend.agents.quiz_agent import quiz_agent
+from backend.services.lyzr_agent_framework import lyzr_framework
 
 logger = logging.getLogger("voicestudy.study")
 
@@ -19,6 +20,7 @@ class StudyRequest(BaseModel):
     uid: Optional[str] = None
     subject_override: Optional[str] = None
     topic_override: Optional[str] = None
+    history: Optional[List[Dict[str, Any]]] = None
     metadata: Optional[Dict[str, Any]] = None
 
 @router.post("/study")
@@ -29,7 +31,6 @@ def process_study_request(req: StudyRequest):
 
     user_uid = req.uid or (req.metadata.get("uid") if req.metadata else None)
 
-    # 1. Voice Adapter processing
     voice_payload = VoiceInputPayload(
         source=req.source or "web_speech",
         transcript=req.transcript.strip(),
@@ -39,13 +40,13 @@ def process_study_request(req: StudyRequest):
     processed_voice = voice_adapter.process_incoming_voice(voice_payload)
     clean_transcript = processed_voice["transcript"]
 
-    # 2. Orchestrator Agent Intent Analysis
-    intent_data = orchestrator_agent.analyze_intent(clean_transcript)
+    intent_data = orchestrator_agent.analyze_intent(clean_transcript, history=req.history)
     intent = intent_data["intent"]
     subject = req.subject_override or intent_data["subject"]
     topic = req.topic_override or intent_data["topic"]
 
-    # 3. Dispatch to specialized agent workflow based on intent
+    provider_status = lyzr_framework.get_framework_status()
+
     response_dict = {}
     if intent == "REMEMBER":
         saved_result = study_memory_agent.save_study_memory(
@@ -59,6 +60,7 @@ def process_study_request(req: StudyRequest):
             "intent": intent,
             "orchestration": intent_data,
             "voice_meta": processed_voice,
+            "ai_provider": provider_status,
             "agent_executed": "Study Memory Agent",
             "message": f"Saved study note under '{subject} - {topic}' in Qdrant.",
             "response_type": "memory_saved",
@@ -74,12 +76,14 @@ def process_study_request(req: StudyRequest):
         )
         assistant_reply = study_assistant_agent.answer_question(
             user_query=clean_transcript,
-            retrieved_memories=retrieved_memories
+            retrieved_memories=retrieved_memories,
+            history=req.history
         )
         response_dict = {
             "intent": intent,
             "orchestration": intent_data,
             "voice_meta": processed_voice,
+            "ai_provider": provider_status,
             "agent_executed": "Study Assistant Agent",
             "message": assistant_reply["answer"],
             "response_type": "answer",
@@ -98,7 +102,7 @@ def process_study_request(req: StudyRequest):
             uid_filter=user_uid
         )
         quiz_data = quiz_agent.generate_quiz(
-            topic_or_subject=topic if topic != "General Study" else subject,
+            topic_or_subject=topic if topic != "General Concept" else subject,
             num_questions=5,
             difficulty="medium",
             retrieved_memories=retrieved_memories
@@ -107,8 +111,9 @@ def process_study_request(req: StudyRequest):
             "intent": intent,
             "orchestration": intent_data,
             "voice_meta": processed_voice,
+            "ai_provider": provider_status,
             "agent_executed": "Quiz Agent",
-            "message": f"Generated {quiz_data.get('count', 5)} revision questions based on your study history.",
+            "message": f"Generated {quiz_data.get('count', 5)} revision questions for {subject}.",
             "response_type": "quiz",
             "retrieved_memories": retrieved_memories,
             "data": quiz_data
@@ -121,6 +126,7 @@ def process_study_request(req: StudyRequest):
             "intent": intent,
             "orchestration": intent_data,
             "voice_meta": processed_voice,
+            "ai_provider": provider_status,
             "agent_executed": "Study Memory Agent",
             "message": summary_data["summary"],
             "response_type": "summary",
@@ -129,13 +135,13 @@ def process_study_request(req: StudyRequest):
         }
 
     else:
-        # Fallback default
         retrieved_memories = study_memory_agent.retrieve_relevant_memories(query=clean_transcript, limit=3, uid_filter=user_uid)
-        assistant_reply = study_assistant_agent.answer_question(clean_transcript, retrieved_memories)
+        assistant_reply = study_assistant_agent.answer_question(clean_transcript, retrieved_memories, history=req.history)
         response_dict = {
-            "intent": "RETRIEVE",
+            "intent": "EXPLAIN",
             "orchestration": intent_data,
             "voice_meta": processed_voice,
+            "ai_provider": provider_status,
             "agent_executed": "Study Assistant Agent",
             "message": assistant_reply["answer"],
             "response_type": "answer",
@@ -148,10 +154,6 @@ def process_study_request(req: StudyRequest):
 
 @router.post("/voice/omi-webhook")
 def omi_webhook(payload: Dict[str, Any]):
-    """
-    Webhook endpoint to directly connect Omi Wearable transcription stream.
-    Accepts Omi webhook payload and forwards to study pipeline.
-    """
     transcript = payload.get("transcript") or payload.get("text") or payload.get("body", "")
     if not transcript:
         return {"status": "ignored", "reason": "empty_transcript"}
