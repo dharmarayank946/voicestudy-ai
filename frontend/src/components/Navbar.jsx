@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Search, Mic, Sparkles, Database } from 'lucide-react';
 
 export default function Navbar({ activeTab, onQuickSearch }) {

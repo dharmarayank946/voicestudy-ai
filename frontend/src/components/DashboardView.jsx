@@ -1,9 +1,15 @@
-import React from 'react';
+﻿import React from 'react';
 import { Brain, BookOpen, HelpCircle, Sparkles, Clock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import VoiceOrb from './VoiceOrb';
 
-export default function DashboardView({ memories, stats, onProcessInput, isProcessing, responseData, setActiveTab }) {
+export default function DashboardView({ memories = [], stats = {}, onProcessInput, isProcessing, responseData, setActiveTab }) {
   const recentMemories = memories.slice(0, 4);
+  const totalMemoriesCount = stats.total_memories !== undefined ? stats.total_memories : memories.length;
+  const totalTopicsCount = stats.total_topics !== undefined ? stats.total_topics : (stats.topics_list?.length || 0);
+
+  const subjectsSubtitle = stats.subjects_list && stats.subjects_list.length > 0 
+    ? stats.subjects_list.slice(0, 4).join(', ') 
+    : 'No topics studied yet';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -26,10 +32,10 @@ export default function DashboardView({ memories, stats, onProcessInput, isProce
             </div>
           </div>
           <h3 style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-            {stats.total_memories || memories.length || 0}
+            {totalMemoriesCount}
           </h3>
-          <p style={{ fontSize: '0.78rem', color: 'var(--accent-emerald)', marginTop: '0.25rem' }}>
-            ✓ Qdrant Vector Store
+          <p style={{ fontSize: '0.78rem', color: 'var(--accent-emerald)', marginTop: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            <CheckCircle2 size={13} color="var(--accent-emerald)" /> Qdrant Vector Store
           </p>
         </div>
 
@@ -41,22 +47,22 @@ export default function DashboardView({ memories, stats, onProcessInput, isProce
             </div>
           </div>
           <h3 style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-            {stats.total_topics || 3}
+            {totalTopicsCount}
           </h3>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
-            DBMS, Computer Networks, OS
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.25rem', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+            {subjectsSubtitle}
           </p>
         </div>
 
         <div className="glass-card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' }}>Revision Quizzes</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: '600' }}>Revision Generator</span>
             <div style={{ padding: '0.5rem', borderRadius: '10px', background: 'rgba(139, 92, 246, 0.1)' }}>
               <HelpCircle size={20} color="var(--accent-purple)" />
             </div>
           </div>
           <h3 style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--text-primary)' }}>
-            5
+            {totalTopicsCount > 0 ? `${totalTopicsCount * 3}+` : '0'}
           </h3>
           <p style={{ fontSize: '0.78rem', color: 'var(--accent-purple)', marginTop: '0.25rem' }}>
             Active Recall Mode
@@ -86,12 +92,12 @@ export default function DashboardView({ memories, stats, onProcessInput, isProce
 
         {recentMemories.length === 0 ? (
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', padding: '1rem 0' }}>
-            No study memories saved yet. Speak to the orb above to create your first study note!
+            No study memories saved yet. Speak to the orb above or use the Study tab to create your first note!
           </p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
             {recentMemories.map((m, idx) => (
-              <div key={m.id || idx} className="glass-card" style={{ padding: '1.1rem', background: 'rgba(10, 16, 26, 0.6)' }}>
+              <div key={m.id || idx} className="glass-card glass-card-interactive" style={{ padding: '1.1rem', background: 'rgba(10, 16, 26, 0.6)', cursor: 'pointer' }} onClick={() => setActiveTab('memory')}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <span className="badge badge-cyan">{m.subject || 'General'}</span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
