@@ -1,4 +1,4 @@
-﻿import os
+import os
 import json
 import logging
 import httpx
@@ -6,35 +6,74 @@ from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger("voicestudy.lyzr")
 
+class LyzrAPIError(Exception):
+    """Exception raised when the Lyzr Agent API returns an error response."""
+    pass
+
+class LyzrTimeoutError(Exception):
+    """Exception raised when the Lyzr Agent API request times out."""
+    pass
+
 class LyzrAgentFramework:
     """
-    Lyzr Agent Framework service supporting genuine AI providers (Lyzr, OpenAI)
-    and a robust, multi-subject offline engine.
+    Lyzr Agent Framework service connecting to Lyzr Agent Studio V3 Chat API
+    (https://agent-prod.studio.lyzr.ai/v3/inference/chat/) with graceful error handling
+    and an offline fallback engine for development without API keys.
     """
-    def __init__(self):
-        self.lyzr_api_key = os.getenv("LYZR_API_KEY", "").strip()
-        self.llm_api_key = (os.getenv("LLM_API_KEY", "") or os.getenv("OPENAI_API_KEY", "")).strip()
-        self.model = os.getenv("LLM_MODEL", "gpt-4o-mini").strip()
-        self.base_url = os.getenv("LYZR_BASE_URL", "https://agent-prod.lyzr.ai").rstrip("/")
+    @property
+    def lyzr_api_key(self) -> str:
+        return os.getenv("LYZR_API_KEY", "").strip()
 
-        self.agent_ids = {
-            "Orchestrator": os.getenv("LYZR_AGENT_ID_ORCHESTRATOR", "").strip() or os.getenv("LYZR_AGENT_ID", "").strip(),
-            "Assistant": os.getenv("LYZR_AGENT_ID_ASSISTANT", "").strip() or os.getenv("LYZR_AGENT_ID", "").strip(),
-            "Quiz": os.getenv("LYZR_AGENT_ID_QUIZ", "").strip() or os.getenv("LYZR_AGENT_ID", "").strip(),
-            "Memory": os.getenv("LYZR_AGENT_ID_MEMORY", "").strip() or os.getenv("LYZR_AGENT_ID", "").strip()
-        }
+    @property
+    def default_agent_id(self) -> str:
+        return os.getenv("LYZR_AGENT_ID", "").strip()
+
+    @property
+    def user_id(self) -> str:
+        return os.getenv("LYZR_USER_ID", "default_user").strip()
+
+    @property
+    def chat_url(self) -> str:
+        return os.getenv("LYZR_CHAT_URL", "https://agent-prod.studio.lyzr.ai/v3/inference/chat/").strip()
+
+    @property
+    def llm_api_key(self) -> str:
+        return (os.getenv("LLM_API_KEY", "") or os.getenv("OPENAI_API_KEY", "")).strip()
+
+    @property
+    def model(self) -> str:
+        return os.getenv("LLM_MODEL", "gpt-4o-mini").strip()
 
     def get_agent_id(self, agent_name: str) -> str:
-        configured_id = self.agent_ids.get(agent_name, "")
-        if configured_id:
-            return configured_id
-        return f"voicestudy_{agent_name.lower().replace(' ', '_')}"
+        clean_name = agent_name.upper().replace(" ", "_").replace("-", "_")
+        env_override = os.getenv(f"LYZR_AGENT_ID_{clean_name}", "").strip()
+        if env_override and not env_override.endswith("_id_here") and "placeholder" not in env_override.lower():
+            return env_override
+
+        # Check common aliases for multi-agent setups
+        aliases = {
+            "MANAGER": ["ORCHESTRATOR"],
+            "ORCHESTRATOR": ["MANAGER"],
+            "MEMORY_ASSISTANT": ["ASSISTANT", "MEMORY"],
+            "ASSISTANT": ["MEMORY_ASSISTANT", "MEMORY"],
+            "ACTION_ITEMS": ["ACTION_ITEM_EXTRACTOR", "ACTION_ITEM"],
+            "ACTION_ITEM_EXTRACTOR": ["ACTION_ITEMS", "ACTION_ITEM"],
+            "SUMMARIZER": ["SUMMARY"]
+        }
+        for alias in aliases.get(clean_name, []):
+            val = os.getenv(f"LYZR_AGENT_ID_{alias}", "").strip()
+            if val and not val.endswith("_id_here") and "placeholder" not in val.lower():
+                return val
+
+        if self.default_agent_id:
+            return self.default_agent_id
+        return f"voicestudy_{clean_name.lower()}"
 
     def get_framework_status(self) -> Dict[str, Any]:
-        if self.lyzr_api_key and self.lyzr_api_key.startswith("lyzr-"):
+        if self.lyzr_api_key:
             mode = "real_lyzr_api"
             is_real_ai = True
-            provider_name = "Lyzr AI Platform"
+            provider_name = "Lyzr Studio V3 Chat API"
         elif self.llm_api_key and self.llm_api_key.startswith("sk-"):
             mode = "openai_llm_fallback"
             is_real_ai = True
@@ -44,15 +83,28 @@ class LyzrAgentFramework:
             is_real_ai = False
             provider_name = "Offline Engine Fallback"
 
+        agent_names = ["Manager", "Summarizer", "Action Items", "Memory Assistant", "Quiz"]
+        configured_agents = {name: self.get_agent_id(name) for name in agent_names}
+        has_multi_agent_ids = len(set(configured_agents.values())) > 1
+
         return {
             "mode": mode,
             "is_real_ai": is_real_ai,
             "provider_name": provider_name,
-            "lyzr_api_key_configured": bool(self.lyzr_api_key and self.lyzr_api_key.startswith("lyzr-")),
+            "lyzr_api_key_configured": bool(self.lyzr_api_key),
+            "lyzr_agent_id_configured": bool(self.default_agent_id),
+            "lyzr_user_id": self.user_id,
             "openai_api_key_configured": bool(self.llm_api_key and self.llm_api_key.startswith("sk-")),
-            "base_url": self.base_url,
-            "configured_agent_ids": self.agent_ids,
-            "notice": "Connected to Genuine AI Provider" if is_real_ai else "Offline Engine Mode: No API key configured. Providing curated subject knowledge."
+            "chat_url": self.chat_url,
+            "configured_agent_ids": configured_agents,
+            "multi_agent_orchestration_active": has_multi_agent_ids,
+            "notice": (
+                "Connected to Genuine Lyzr Studio V3 Agents (Multi-Agent Mode)"
+                if (is_real_ai and has_multi_agent_ids)
+                else ("Connected to Genuine Lyzr Studio V3 Agent (Single-Agent Shared Mode)"
+                      if is_real_ai
+                      else "Offline Engine Mode: No API key configured. Providing curated subject knowledge.")
+            )
         }
 
     def execute_agent_prompt(
@@ -61,25 +113,26 @@ class LyzrAgentFramework:
         system_instructions: str,
         user_input: str,
         temperature: float = 0.3,
-        json_output: bool = False
+        json_output: bool = False,
+        session_id: Optional[str] = None
     ) -> str:
         logger.info(f"[LYZR] Agent called: {agent_name} | Input prompt: '{user_input[:80]}...'")
         agent_id = self.get_agent_id(agent_name)
 
-        if self.lyzr_api_key and self.lyzr_api_key.startswith("lyzr-"):
+        if self.lyzr_api_key:
+            headers = {
+                "x-api-key": self.lyzr_api_key,
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "user_id": self.user_id,
+                "agent_id": agent_id,
+                "session_id": session_id or f"{self.user_id}_{agent_name.lower()}",
+                "message": user_input
+            }
             try:
-                headers = {
-                    "x-api-key": self.lyzr_api_key,
-                    "Authorization": f"Bearer {self.lyzr_api_key}",
-                    "Content-Type": "application/json"
-                }
-                payload = {
-                    "user_id": "voicestudy_student",
-                    "agent_id": agent_id,
-                    "message": f"System Instructions: {system_instructions}\n\nTask/Input: {user_input}"
-                }
                 with httpx.Client(timeout=30.0) as client:
-                    response = client.post(f"{self.base_url}/v2/chat", headers=headers, json=payload)
+                    response = client.post(self.chat_url, headers=headers, json=payload)
                     if response.status_code in (200, 201):
                         data = response.json()
                         res_text = (
@@ -91,9 +144,23 @@ class LyzrAgentFramework:
                         )
                         if res_text:
                             logger.info(f"[LYZR] SUCCESS - Real Lyzr API response received for {agent_name}")
-                            return res_text
+                            return str(res_text).strip()
+                        raise LyzrAPIError("Lyzr API response did not contain a valid 'response' field.")
+                    else:
+                        err_snippet = response.text[:200]
+                        logger.error(f"[LYZR] API returned HTTP {response.status_code}: {err_snippet}")
+                        raise LyzrAPIError(f"Lyzr API returned HTTP {response.status_code}: {err_snippet}")
+            except httpx.TimeoutException as te:
+                logger.error(f"[LYZR] Timeout calling Lyzr API at {self.chat_url}: {te}")
+                raise LyzrTimeoutError("Lyzr Agent request timed out after 30 seconds.")
+            except (LyzrAPIError, LyzrTimeoutError):
+                raise
+            except httpx.HTTPError as he:
+                logger.error(f"[LYZR] HTTP error communicating with Lyzr API: {he}")
+                raise LyzrAPIError(f"Lyzr Agent HTTP error: {he}")
             except Exception as e:
-                logger.warning(f"[LYZR] Real Lyzr API call failed for {agent_name}: {e}")
+                logger.error(f"[LYZR] Unexpected error calling Lyzr API: {e}")
+                raise LyzrAPIError(f"Lyzr Agent request failed: {e}")
 
         if self.llm_api_key and self.llm_api_key.startswith("sk-"):
             try:
@@ -173,8 +240,14 @@ class LyzrAgentFramework:
                 })
             return intent
 
-        elif agent_name == "Assistant":
+        elif agent_name in ["Assistant", "Memory Assistant"]:
             return self._build_offline_assistant_answer(user_input)
+
+        elif agent_name == "Summarizer":
+            return self._build_offline_summarizer_answer(user_input)
+
+        elif agent_name in ["Action Items", "Action Item Extractor"]:
+            return self._build_offline_action_items_answer(user_input)
 
         elif agent_name == "Quiz":
             import re
@@ -194,6 +267,36 @@ class LyzrAgentFramework:
             return f"Generated {len(selected_questions)} revision questions for {topic_name}."
 
         return f"Processed query by {agent_name}: {user_input}"
+
+    def _build_offline_summarizer_answer(self, transcript: str) -> str:
+        clean = transcript.replace("TRANSCRIPT TO SUMMARIZE:\n", "").replace("SESSION CONTEXT:\n", "").strip()
+        first_line = clean.split("\n")[0] if clean else "Discussion session reviewed."
+        return (
+            "### Executive Summary\n"
+            f"The meeting or lecture covered core discussion points: {first_line[:140]}.\n\n"
+            "### Key Points & Discussion Topics\n"
+            "- **Main Concept**: In-depth review of subject material and operational milestones.\n"
+            "- **Core Decisions**: Agreed on upcoming priorities, design choices, and delivery timelines.\n"
+            "- **Knowledge Retention**: Indexed key learnings for ongoing study and review.\n\n"
+            "### Core Takeaways\n"
+            "- High alignment across discussed topics.\n"
+            "- Notes successfully saved for quick revision."
+        )
+
+    def _build_offline_action_items_answer(self, transcript: str) -> str:
+        return (
+            "### Action Items & Tasks\n\n"
+            "| # | Task | Owner | Deadline | Priority |\n"
+            "|---|---|---|---|---|\n"
+            "| 1 | Review and finalize session deliverables | Unassigned | Not specified | High |\n"
+            "| 2 | Index key lecture takeaways into vector store | System | End of day | Medium |\n"
+            "| 3 | Follow up on outstanding discussion points | Team | Next session | Normal |\n\n"
+            "### Key Decisions Made\n"
+            "- Confirmed project milestones and meeting objectives.\n"
+            "- Agreed on follow-up schedule and deliverables.\n\n"
+            "### Follow-ups & Open Questions\n"
+            "- Coordinate next review checkpoint with participants."
+        )
 
     def _build_offline_assistant_answer(self, user_input: str) -> str:
         q_lower = user_input.lower()

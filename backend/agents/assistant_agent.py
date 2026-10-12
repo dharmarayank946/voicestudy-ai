@@ -49,10 +49,11 @@ class StudyAssistantAgent:
                 if overlap >= 2 or (overlap >= 1 and is_sub_match):
                     relevant_memories.append(m)
 
+        memories_to_use = relevant_memories if relevant_memories else (retrieved_memories or [])
         context_str = ""
-        if relevant_memories:
+        if memories_to_use:
             context_items = []
-            for idx, m in enumerate(relevant_memories, 1):
+            for idx, m in enumerate(memories_to_use, 1):
                 sub = m.get("subject", "General")
                 top = m.get("topic", "Topic")
                 txt = m.get("text", "")
@@ -64,7 +65,7 @@ class StudyAssistantAgent:
             history_lines = [f"{msg.get('role', 'user')}: {msg.get('content', '')}" for msg in history[-4:]]
             history_str = "CONVERSATION HISTORY (FOR FOLLOW-UP CONTEXT ONLY):\n" + "\n".join(history_lines) + "\n\n"
 
-        full_prompt = f"{history_str}STUDENT QUESTION: \"{user_query}\"\n\nRETRIEVED NOTEBOOK MEMORIES (IF RELEVANT):\n{context_str if context_str else 'No prior notebook memories matched.'}\n\nPlease generate an intelligent, structured study tutor response."
+        full_prompt = f"{history_str}STUDENT QUESTION: \"{user_query}\"\n\nRETRIEVED NOTEBOOK MEMORIES (FROM QDRANT VECTOR STORE):\n{context_str if context_str else 'No prior notebook memories matched.'}\n\nPlease generate an intelligent, structured study tutor response."
 
         response_text = lyzr_framework.execute_agent_prompt(
             agent_name="Assistant",
@@ -98,3 +99,5 @@ class StudyAssistantAgent:
         }
 
 study_assistant_agent = StudyAssistantAgent()
+MemoryAssistantAgent = StudyAssistantAgent
+memory_assistant_agent = study_assistant_agent

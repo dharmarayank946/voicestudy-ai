@@ -1,4 +1,4 @@
-﻿import json
+import json
 import logging
 from typing import Dict, Any, List, Optional
 from backend.services.lyzr_agent_framework import lyzr_framework
@@ -31,15 +31,14 @@ class OrchestratorAgent:
             history_text = "\n".join([f"{m.get('role', 'user')}: {m.get('content', '')}" for m in recent_turns])
             context_prompt = f"RECENT CONVERSATION HISTORY:\n{history_text}\n\nCURRENT USER PROMPT: {user_input}"
 
-        raw_response = lyzr_framework.execute_agent_prompt(
-            agent_name="Orchestrator",
-            system_instructions=SYSTEM_PROMPT,
-            user_input=context_prompt,
-            temperature=0.1,
-            json_output=True
-        )
-
         try:
+            raw_response = lyzr_framework.execute_agent_prompt(
+                agent_name="Orchestrator",
+                system_instructions=SYSTEM_PROMPT,
+                user_input=context_prompt,
+                temperature=0.1,
+                json_output=True
+            )
             start_idx = raw_response.find("{")
             end_idx = raw_response.rfind("}") + 1
             if start_idx != -1 and end_idx != 0:

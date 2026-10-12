@@ -1,8 +1,8 @@
-﻿import os
+import os
 import uuid
 import logging
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import Distance, VectorParams, PointStruct
@@ -121,7 +121,7 @@ class QdrantMemoryService:
     ) -> Dict[str, Any]:
         """Save a study memory to Qdrant vector database."""
         memory_id = str(uuid.uuid4())
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         
         vector = self.generate_embedding(text)
         

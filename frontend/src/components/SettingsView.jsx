@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
-import { Settings, ShieldCheck, Database, Radio, Cpu, Key, Save, CheckCircle2, Sliders } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, ShieldCheck, Database, Radio, Cpu, Key, Save, CheckCircle2, Sliders, Award } from 'lucide-react';
 
 export default function SettingsView({ healthData }) {
   const qdrant = healthData?.vector_memory || {};
@@ -60,6 +60,51 @@ export default function SettingsView({ healthData }) {
           {saveNotice}
         </div>
       )}
+
+      {/* Hackathon & Project Context Display */}
+      <div className="glass-card" style={{ borderColor: 'rgba(0, 242, 254, 0.25)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Award size={20} color="var(--accent-cyan)" />
+            <h4 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>
+              Hackathon Context & Connected Stack
+            </h4>
+          </div>
+          <span className="badge badge-cyan" style={{ fontSize: '0.75rem' }}>
+            Meeting & Lecture Intelligence Track
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '10px' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Organizers</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>AI House × HiDevs</div>
+          </div>
+          <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '10px' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Project</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--accent-cyan)' }}>VoiceStudy AI</div>
+          </div>
+          <div style={{ padding: '0.75rem', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '10px' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Required Tech Stack</div>
+            <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--accent-emerald)' }}>Lyzr × Qdrant × Omi</div>
+          </div>
+        </div>
+
+        <div style={{ padding: '0.85rem', background: 'rgba(10, 16, 26, 0.8)', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '0.4rem', fontWeight: '600' }}>
+            Connected 3-Tool Execution Workflow:
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+            <span style={{ color: 'var(--accent-cyan)', fontWeight: '600' }}>1. Omi Webhook Transcripts</span>
+            <span>&rarr;</span>
+            <span style={{ color: 'var(--accent-emerald)', fontWeight: '600' }}>2. Qdrant Vector Memory</span>
+            <span>&rarr;</span>
+            <span style={{ color: 'var(--accent-purple)', fontWeight: '600' }}>3. Lyzr Multi-Agent Reasoning</span>
+            <span>&rarr;</span>
+            <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>4. Grounded Study Response</span>
+          </div>
+        </div>
+      </div>
 
       {/* Integration Status Cards */}
       <div className="glass-card">

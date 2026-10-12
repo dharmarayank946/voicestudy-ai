@@ -1,8 +1,9 @@
 # VoiceStudy AI — Official Hackathon Demo Script (5 Minutes)
 
+> **Hackathon Organizers:** AI House × HiDevs  
+> **Selected Track:** Meeting & Lecture Intelligence  
+> **Required Stack:** Lyzr × Qdrant × Omi  
 > **Tagline:** Speak. Remember. Revise.  
-> **Build Track:** Meeting & Lecture Intelligence  
-> **Technologies:** Omi Wearable + Qdrant Vector DB + Lyzr Agent Framework  
 
 ---
 
@@ -12,7 +13,7 @@
 - **Presenter Action:** Show VoiceStudy AI home screen with the glowing **Voice Orb**.
 - **Script:**  
   *"Hi everyone! As students, we spend hours attending lectures and studying complex subjects, but we struggle with active recall and quick revision. Notes get scattered and forgotten.  
-  Meet **VoiceStudy AI** — a voice-first AI study assistant that captures spoken study and lecture information via **Omi Wearable**, embeds it into **Qdrant Vector DB**, and uses **Lyzr Agents** for active recall and revision reasoning. Our build track is **Meeting & Lecture Intelligence**."*
+  Meet **VoiceStudy AI** — a voice-first AI study assistant built for the **AI House × HiDevs Hackathon** in the **Meeting & Lecture Intelligence** track. It connects **Omi real-time voice capture**, **Qdrant persistent vector memory**, and **Lyzr agent reasoning** into one seamless, unified learning workflow."*
 
 ---
 

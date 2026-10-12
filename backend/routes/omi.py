@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Request, Query, HTTPException
 from backend.services.omi_parser import parse_omi_conversation_payload, parse_omi_realtime_payload
 from backend.memory.qdrant_service import memory_service
@@ -35,7 +35,7 @@ def add_omi_log(event_type: str, raw_payload: Dict[str, Any], uid: str):
         "id": len(OMI_WEBHOOK_LOGS) + 1,
         "event_type": event_type,
         "uid": uid,
-        "received_at": datetime.utcnow().isoformat(),
+        "received_at": datetime.now(timezone.utc).isoformat(),
         "sanitized_payload": sanitize_payload(raw_payload)
     }
     OMI_WEBHOOK_LOGS.insert(0, log_entry)
@@ -71,7 +71,10 @@ def process_omi_conversation_background(payload: Dict[str, Any], uid: str):
                 "source": "omi_conversation",
                 "omi_uid": parsed["uid"],
                 "session_id": parsed.get("session_id"),
+                "timestamp": parsed.get("timestamp"),
+                "title": parsed.get("title"),
                 "structured_overview": parsed.get("overview"),
+                "action_items": parsed.get("action_items", []),
                 "speaker": parsed.get("speaker"),
                 "raw_segments_count": parsed.get("raw_segments_count", 0),
                 "intent_detected": intent_data.get("intent")
@@ -104,6 +107,9 @@ def process_omi_realtime_background(payload: Dict[str, Any], uid: str):
                 "source": "omi_realtime",
                 "omi_uid": parsed["uid"],
                 "speaker": parsed.get("speaker"),
+                "is_user": parsed.get("is_user"),
+                "start": parsed.get("start"),
+                "end": parsed.get("end"),
                 "session_id": parsed.get("session_id")
             }
         )
@@ -143,7 +149,7 @@ async def omi_conversation_endpoint(
         "status": "success",
         "message": "Omi conversation webhook received and queued for processing",
         "uid": str(actual_uid),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -171,7 +177,7 @@ async def omi_realtime_endpoint(
         "status": "success",
         "message": "Omi realtime webhook segment received",
         "uid": str(actual_uid),
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 

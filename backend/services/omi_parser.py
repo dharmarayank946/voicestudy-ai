@@ -83,6 +83,7 @@ def parse_omi_conversation_payload(payload: Dict[str, Any], uid_query: Optional[
     # 5. Session & Speaker Metadata
     session_id = payload.get("session_id") or payload.get("id") or payload.get("conversation_id")
     speaker = payload.get("speaker") or ("User" if payload.get("is_user") else "Omi User")
+    raw_timestamp = payload.get("timestamp") or payload.get("created_at") or payload.get("started_at")
 
     return {
         "uid": uid,
@@ -93,6 +94,7 @@ def parse_omi_conversation_payload(payload: Dict[str, Any], uid_query: Optional[
         "category": category or "General Study",
         "action_items": action_items if isinstance(action_items, list) else [],
         "session_id": str(session_id) if session_id else None,
+        "timestamp": str(raw_timestamp) if raw_timestamp else None,
         "speaker": str(speaker),
         "raw_segments_count": len(segments) if isinstance(segments, list) else 0,
         "source": "omi_conversation"
@@ -102,6 +104,7 @@ def parse_omi_conversation_payload(payload: Dict[str, Any], uid_query: Optional[
 def parse_omi_realtime_payload(payload: Dict[str, Any], uid_query: Optional[str] = None) -> Dict[str, Any]:
     """
     Defensive parser for Omi real-time segment webhook payloads.
+    Extracts text, speaker, is_user, start, end, and session_id.
     """
     if not isinstance(payload, dict):
         payload = {}
@@ -110,25 +113,44 @@ def parse_omi_realtime_payload(payload: Dict[str, Any], uid_query: Optional[str]
     uid = str(raw_uid).strip() if raw_uid else "default_omi_user"
 
     text = str(payload.get("text") or payload.get("transcript") or "").strip()
+    speaker = payload.get("speaker")
+    is_user = payload.get("is_user")
+    start = payload.get("start")
+    end = payload.get("end")
 
     if not text:
         segments = payload.get("segments") or payload.get("transcript_segments") or []
-        if isinstance(segments, list):
+        if isinstance(segments, list) and segments:
             lines = []
             for seg in segments:
-                if isinstance(seg, dict) and seg.get("text"):
-                    lines.append(str(seg.get("text")).strip())
+                if isinstance(seg, dict):
+                    seg_text = str(seg.get("text") or "").strip()
+                    if seg_text:
+                        lines.append(seg_text)
+                    if not speaker and seg.get("speaker"):
+                        speaker = seg.get("speaker")
+                    if is_user is None and "is_user" in seg:
+                        is_user = seg.get("is_user")
+                    if start is None and "start" in seg:
+                        start = seg.get("start")
+                    if end is None and "end" in seg:
+                        end = seg.get("end")
                 elif isinstance(seg, str) and seg.strip():
                     lines.append(seg.strip())
             text = " ".join(lines)
 
-    speaker = payload.get("speaker") or ("User" if payload.get("is_user") else "Speaker")
+    if not speaker:
+        speaker = "User" if is_user is True else ("Speaker" if is_user is None else "Assistant")
+
     session_id = payload.get("session_id") or payload.get("id")
 
     return {
         "uid": uid,
         "text": text.strip(),
         "speaker": str(speaker),
+        "is_user": is_user if isinstance(is_user, bool) else None,
+        "start": float(start) if start is not None and str(start).replace(".", "", 1).isdigit() else None,
+        "end": float(end) if end is not None and str(end).replace(".", "", 1).isdigit() else None,
         "session_id": str(session_id) if session_id else None,
         "source": "omi_realtime"
     }

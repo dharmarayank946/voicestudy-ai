@@ -18,6 +18,11 @@ def health_check():
         "status": "healthy",
         "service": "VoiceStudy AI",
         "version": "1.0.0",
+        "hackathon": {
+            "organizers": "AI House × HiDevs",
+            "track": "Meeting & Lecture Intelligence",
+            "required_stack": "Lyzr × Qdrant × Omi"
+        },
         "vector_memory": {
             "status": "connected",
             "provider": "Qdrant",

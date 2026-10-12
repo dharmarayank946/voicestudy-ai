@@ -6,48 +6,44 @@
 
 ---
 
-## 1. Overview
-**VoiceStudy AI** is a voice-first study and lecture intelligence assistant built for students and lifelong learners. Speak naturally about what you studied during lectures or study sessions, and VoiceStudy AI captures your spoken audio via **Omi Wearable**, stores vector embeddings in **Qdrant Vector Database**, and uses **Lyzr Agent Framework** for semantic retrieval, contextual explanations, and active recall revision quizzes.
+## 1. Hackathon Details
+
+### 1.1 Project Context
+- **Hackathon Organizers**: AI House × HiDevs
+- **Required Technology Stack**: Lyzr × Qdrant × Omi
+- **Project Name**: VoiceStudy AI
+- **Selected Track**: Meeting & Lecture Intelligence
+
+### 1.2 Mandatory Technology Integrations
+- **Omi**: Real-time voice capture and conversation input via defensive webhook listeners (`POST /omi/conversation`, `POST /omi/realtime`) and browser speech fallback.
+- **Qdrant**: Persistent vector memory and semantic retrieval storing 1536-dimensional embeddings with strict `uid` user isolation and hard deletion capabilities.
+- **Lyzr**: AI agent reasoning, orchestration, and task execution coordinating Orchestrator, Study Assistant, Memory, and Quiz agents.
+- **Unified Workflow**: All three technologies work together in one connected execution workflow.
+
+### 1.3 Relevant Project Expectations
+- **Working Software**: Fully functional full-stack application (FastAPI backend + glassmorphic React frontend) actively handling voice input, vector memory, and agent responses.
+- **Clear Project Structure and Documentation**: Clean separation of API routes, memory persistence services, agent orchestration, and UI components.
+- **Observable Agent Workflows**: Live execution logging and progress tracking across all pipeline stages (`[OMI]` $\rightarrow$ `[MEMORY]` $\rightarrow$ `[QDRANT]` $\rightarrow$ `[LYZR]` $\rightarrow$ `[APP]`).
+- **Relevant Answers Based on Retrieved Memories**: Grounded Q&A and active recall quizzes synthesized directly from stored user notes with strict multi-tenant isolation.
 
 ---
 
-## 2. Problem
-Students attend hours of lectures and study sessions but struggle with active recall, contextual search across scattered notes, and quick exam revision. Taking notes manually takes focus away from active listening, while traditional note-taking apps lack intelligent semantic search grounded in personal learning history.
+## 2. How the Three Tools Connect
 
----
+VoiceStudy AI connects Omi, Qdrant, and Lyzr into a single continuous study execution loop:
 
-## 3. Solution
-VoiceStudy AI creates a hands-free, intelligent learning loop:
-1. **Hands-free Voice Ingestion**: Spoken study notes captured via Omi hardware or Web Speech API.
-2. **Defensive Processing**: FastAPI backend extracts transcripts, speaker metadata, and structured overviews.
-3. **Persistent Vector Memory**: Stores 1536-dimensional embeddings in Qdrant collections indexed by user `uid`.
-4. **Agentic Active Recall**: Lyzr specialized agents search Qdrant memory to answer study questions and synthesize 5-question revision quizzes.
+1. **Omi sends conversation transcripts to the backend through webhooks**  
+   Spoken study notes captured via Omi Wearable (or the developer webhook simulator) are transmitted to the FastAPI backend via `POST /omi/conversation` or `POST /omi/realtime`.
+2. **The backend converts text into vectors and stores memories in Qdrant**  
+   The backend defensively parses the payload, extracts transcripts and structured summaries, generates 1536-dimensional embeddings, and writes the memory point directly to persistent Qdrant vector storage indexed by the user's `uid`.
+3. **When a question is asked, the backend retrieves relevant memories from Qdrant**  
+   When a student asks a revision question via voice or text, the backend executes vector semantic similarity search in Qdrant filtered strictly by the user's `uid`.
+4. **The backend sends the question and retrieved context to the Lyzr agent**  
+   The retrieved context memories and the student query are packaged into a structured prompt and passed to the Lyzr Agent Framework.
+5. **The agent processes the request and returns its response through the backend**  
+   The Lyzr agent (Assistant or Quiz agent) reasons over the context, synthesizes an answer or 5-question quiz, and returns the response through the FastAPI backend to the frontend UI with spoken audio synthesis.
 
----
-
-## 4. Key Features
-- **🎙 Native Omi Wearable Integration**: Real-time & completed conversation webhook endpoints (`/omi/conversation`, `/omi/realtime`).
-- **🗄 Qdrant Vector Memory**: Persistent vector storage with FastEmbed/OpenAI embeddings and strict `uid` multi-tenant isolation.
-- **🤖 Lyzr Multi-Agent Reasoning**: Specialized Orchestrator, Assistant, Memory, and Quiz Agents.
-- **⚡ Fast Webhook Responses**: Non-blocking background worker tasks ensure HTTP 200 responses in **< 50ms**.
-- **🗑 Real Forget Memory Control**: Real point removal directly from Qdrant vector storage.
-- **🔍 Live Observable Workflow**: Real-time dev execution progress panel (`[OMI]` $\rightarrow$ `[MEMORY]` $\rightarrow$ `[QDRANT]` $\rightarrow$ `[LYZR]` $\rightarrow$ `[APP]`).
-- **📱 Responsive Glassmorphic UI**: Animated Voice Orb interface designed for desktop, tablet, and mobile browsers.
-
----
-
-## 5. Why This Matters
-By removing the manual friction of note organization and flashcard creation, VoiceStudy AI transforms passive lecture listening into permanent, searchable knowledge. Students retain material faster and perform better using grounded active recall.
-
----
-
-## 6. Build Track
-- **Track**: **Meeting & Lecture Intelligence**
-- **Rationale**: VoiceStudy AI captures spoken lecture and study room audio, converts transcript streams into persistent semantic memory, and uses multi-agent reasoning to deliver contextual Q&A and lecture revision tools.
-
----
-
-## 7. Architecture
+### Connection Architecture Diagram
 ```mermaid
 graph TD
     A[User Voice / Omi Wearable] --> B[FastAPI Backend]
@@ -57,7 +53,7 @@ graph TD
     B1 --> C[Memory Service]
     B2 --> C
     
-    C --> D[FastEmbed / OpenAI Vector Embeddings]
+    C --> D[Vector Embeddings 1536-dim]
     D --> E[Qdrant Persistent Vector Store]
     
     E --> F[Semantic Retrieval by UID]
@@ -72,12 +68,12 @@ graph TD
     H3 --> I
 ```
 
-**Official Connected Hackathon Flow:**
-$$\text{Omi Voice} \longrightarrow \text{FastAPI Webhook} \longrightarrow \text{Memory Service} \longrightarrow \text{Qdrant Vector DB} \longrightarrow \text{Semantic Retrieval} \longrightarrow \text{Lyzr Agents} \longrightarrow \text{VoiceStudy AI Response}$$
+**Connected Execution Flow:**
+$$\text{Omi Voice Capture} \longrightarrow \text{FastAPI Webhook} \longrightarrow \text{Qdrant Vector DB} \longrightarrow \text{Semantic Retrieval} \longrightarrow \text{Lyzr Agent Reasoning} \longrightarrow \text{VoiceStudy AI Response}$$
 
 ---
 
-## 8. Technology Stack
+## 3. Technology Stack
 - **Frontend**: React, Vite, JavaScript, CSS (Custom Glassmorphic Theme), Lucide Icons, Web Speech API.
 - **Backend**: Python 3.14+, FastAPI, Uvicorn, Pydantic, HTTPX, Python-dotenv.
 - **AI Agent Framework**: Lyzr Agent Framework (`lyzr-agent-api`).
@@ -86,7 +82,18 @@ $$\text{Omi Voice} \longrightarrow \text{FastAPI Webhook} \longrightarrow \text{
 
 ---
 
-## 9. Omi Integration
+## 4. Key Features
+- **🎙 Native Omi Wearable Integration**: Real-time & completed conversation webhook endpoints (`/omi/conversation`, `/omi/realtime`).
+- **🗄 Qdrant Vector Memory**: Persistent vector storage with 1536-dimensional embeddings and strict `uid` multi-tenant isolation.
+- **🤖 Lyzr Multi-Agent Reasoning**: Specialized Orchestrator, Assistant, Memory, and Quiz Agents.
+- **⚡ Fast Webhook Responses**: Non-blocking background worker tasks ensure HTTP 200 responses in **< 50ms**.
+- **🗑 Real Forget Memory Control**: Real point removal directly from Qdrant vector storage.
+- **🔍 Live Observable Workflow**: Real-time dev execution progress panel (`[OMI]` $\rightarrow$ `[MEMORY]` $\rightarrow$ `[QDRANT]` $\rightarrow$ `[LYZR]` $\rightarrow$ `[APP]`).
+- **📱 Responsive Glassmorphic UI**: Animated Voice Orb interface designed for desktop, tablet, and mobile browsers.
+
+---
+
+## 5. Omi Integration
 FastAPI handles completed conversations and real-time streams with defensive parsing for all payload versions:
 - `POST /omi/conversation?uid=YOUR_UID`
 - `POST /omi/realtime?uid=YOUR_UID`
@@ -94,12 +101,12 @@ FastAPI handles completed conversations and real-time streams with defensive par
 
 ---
 
-## 10. Qdrant Integration
+## 6. Qdrant Integration
 Stores 1536-dimensional embeddings generated from study notes. Every record contains payload metadata (`id`, `text`, `subject`, `topic`, `uid`, `created_at`). Queries strictly enforce `uid_filter` for user privacy.
 
 ---
 
-## 11. Lyzr Integration
+## 7. Lyzr Integration
 The Lyzr multi-agent architecture coordinates:
 - **Orchestrator Agent**: Intent classification (`REMEMBER`, `RETRIEVE`, `EXPLAIN`, `QUIZ`, `SUMMARIZE`).
 - **Study Memory Agent**: Manages Qdrant vector persistence and study timeline summaries.
@@ -108,8 +115,8 @@ The Lyzr multi-agent architecture coordinates:
 
 ---
 
-## 12. End-to-End Workflow
-1. Student speaks to Omi hardware.
+## 8. End-to-End Workflow
+1. Student speaks to Omi hardware (or browser mic / webhook simulator).
 2. Omi posts JSON payload to FastAPI webhook (`POST /omi/conversation`).
 3. FastAPI parses text/overview defensively and queues background embedding.
 4. Vector embedding saved into Qdrant collection tagged with `uid`.
@@ -120,7 +127,7 @@ The Lyzr multi-agent architecture coordinates:
 
 ---
 
-## 13. Project Structure
+## 9. Project Structure
 ```
 VOICESTUDY AI/
 ├── backend/
@@ -144,7 +151,7 @@ VOICESTUDY AI/
 
 ---
 
-## 14. Environment Variables
+## 10. Environment Variables
 Copy `.env.example` to `.env` in the project root:
 ```env
 HOST=0.0.0.0
@@ -177,7 +184,7 @@ OMI_WEBHOOK_SECRET=your_omi_webhook_secret_here
 
 ---
 
-## 15. Local Setup
+## 11. Local Setup
 ```bash
 git clone https://github.com/your-username/voicestudy-ai.git
 cd voicestudy-ai
@@ -185,7 +192,7 @@ cd voicestudy-ai
 
 ---
 
-## 16. Running the Frontend
+## 12. Running the Frontend
 ```bash
 cd frontend
 npm install
@@ -195,7 +202,7 @@ npm run dev
 
 ---
 
-## 17. Running the Backend
+## 13. Running the Backend
 ```bash
 # Run from workspace root (using backend virtual environment)
 .\backend\venv\Scripts\python.exe -m uvicorn backend.main:app --port 8000
@@ -205,7 +212,7 @@ npm run dev
 
 ---
 
-## 18. Qdrant Setup
+## 14. Qdrant Setup
 - **Persistent Local Disk Storage (Default)**: Set `QDRANT_STORAGE_PATH=./qdrant_data` (memories survive backend restarts automatically).
 - **Docker Container**: Run `docker-compose up -d qdrant` and set `QDRANT_URL=http://localhost:6333`.
 - **Qdrant Cloud**: Set `QDRANT_URL=https://<cluster-id>.qdrant.tech` and `QDRANT_API_KEY=<key>`.
@@ -213,23 +220,23 @@ npm run dev
 
 ---
 
-## 19. Lyzr & OpenAI Setup
+## 15. Lyzr & OpenAI Setup
 1. Add your Lyzr API Key (`LYZR_API_KEY=lyzr-...`) and optional role-specific Agent IDs in `.env`.
 2. Add your OpenAI API Key (`OPENAI_API_KEY=sk-proj-...`) for `text-embedding-3-small` vector embeddings and LLM responses.
 3. If unconfigured, VoiceStudy AI transparently uses an offline deterministic engine and SHA-256 hash vector fallback for local development without crashing.
 
 ---
 
-## 20. Omi Setup & Manual Testing Procedures
+## 16. Omi Setup & Manual Testing Procedures
 1. **Automated Testing**: Run simulated webhooks via `.\backend\venv\Scripts\python.exe tests/test_omi_integration.py` or trigger `/omi/test` endpoint.
 2. **Physical Omi Hardware Setup**:
    - Pair your Omi device in the Omi Mobile App.
    - Enable **Developer Mode** under Settings $\rightarrow$ Developer Settings.
-   - Add custom Webhook URL (see Section 21).
+   - Add custom Webhook URL (see Section 17).
 
 ---
 
-## 21. ngrok / Cloudflared Webhook Setup
+## 17. ngrok / Cloudflared Webhook Setup
 Expose your local FastAPI backend to the public internet for physical Omi hardware testing:
 ```bash
 ngrok http 8000
@@ -240,7 +247,7 @@ In Omi app settings:
 
 ---
 
-## 22. Testing
+## 18. Testing
 Run the automated end-to-end integration test suite:
 ```bash
 .\backend\venv\Scripts\python.exe tests/test_omi_integration.py
@@ -248,7 +255,7 @@ Run the automated end-to-end integration test suite:
 
 ---
 
-## 23. Manual Action Items Required for Live Production Credentials
+## 19. Manual Action Items Required for Live Production Credentials
 | Integration | Default Mode | Credentials Required to Enable Live API Mode |
 | :--- | :--- | :--- |
 | **Lyzr Agents** | Local Offline Engine | Add `LYZR_API_KEY` (and optional Agent IDs) to `.env` |
@@ -258,20 +265,20 @@ Run the automated end-to-end integration test suite:
 
 ---
 
-## 24. Privacy / Memory Controls
+## 20. Privacy / Memory Controls
 - **UID Isolation**: Memories stored under one `uid` are isolated and never returned for another user.
 - **Forget Memory**: Real point deletion from Qdrant vector storage (`DELETE /api/memory/{id}`).
 
 ---
 
-## 25. Troubleshooting
+## 21. Troubleshooting
 - **Webhook 404 Error**: Ensure backend is running and ngrok URL includes `/omi/conversation`.
 - **Empty Qdrant Results**: Verify that the query uses the same `uid` query parameter as the stored memory.
 - **Qdrant Storage Lock Error**: Ensure only one uvicorn process is accessing `./qdrant_data` concurrently.
 
 ---
 
-## 26. Deployment Instructions
+## 22. Deployment Instructions
 ### Option A: Docker Compose Deployment
 ```bash
 docker-compose up -d --build
@@ -292,21 +299,16 @@ docker-compose up -d --build
 
 ---
 
-## 27. Hackathon Requirements Checklist
-- [x] Solo Participant
-- [x] Omi genuinely integrated (Defensive webhook parser & background ingestion)
-- [x] Qdrant genuinely integrated (Persistent local disk store & vector search)
-- [x] Lyzr genuinely integrated (Configured framework with API client & fallback)
-- [x] One connected execution loop
-- [x] Public GitHub ready
-- [x] Setup instructions
-- [x] Architecture diagram
-- [x] Working demo ready (`DEMO_SCRIPT.md`)
-- [x] Zero API keys committed
+## 23. Relevant Project Expectations Verification
+- [x] **Working Software**: End-to-end FastAPI backend and glassmorphic React interface actively handling voice ingestion, semantic storage, and multi-agent Q&A.
+- [x] **Clear Project Structure and Documentation**: Clean separation of backend services, agents, Qdrant vector memory, and frontend components.
+- [x] **Observable Agent Workflows**: Live dev execution pipeline logging across stages (`[OMI]` $\rightarrow$ `[MEMORY]` $\rightarrow$ `[QDRANT]` $\rightarrow$ `[LYZR]` $\rightarrow$ `[APP]`).
+- [x] **Relevant Answers Based on Retrieved Memories**: Grounded answers and active recall quizzes synthesized directly from stored user notes with strict multi-tenant isolation.
+- [x] **Mandatory Connected Integrations**: Omi webhooks, Qdrant vector memory, and Lyzr multi-agent reasoning operating in one unified execution loop.
 
 ---
 
-## 28. Future Improvements
+## 24. Future Improvements
 - Spaced repetition algorithm (SuperMemo SM-2) notification reminders.
 - Multi-language voice note transcription support.
 - Direct PDF and lecture slide ingestion into Qdrant memory.

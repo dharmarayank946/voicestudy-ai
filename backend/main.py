@@ -17,7 +17,7 @@ logger = logging.getLogger("voicestudy.main")
 # Initialize FastAPI App
 app = FastAPI(
     title="VoiceStudy AI Backend",
-    description="Voice-First AI Study Assistant powered by Lyzr Agents, Qdrant Vector Memory, and Omi Voice Adapter",
+    description="Voice-First AI Study Assistant powered by Lyzr Agents, Qdrant Vector Memory, and Omi Voice Adapter (AI House × HiDevs Hackathon — Meeting & Lecture Intelligence)",
     version="1.0.0"
 )
 
@@ -89,6 +89,11 @@ def root():
     return {
         "message": "Welcome to VoiceStudy AI Backend API",
         "tagline": "Speak. Remember. Revise.",
+        "hackathon": {
+            "organizers": "AI House × HiDevs",
+            "track": "Meeting & Lecture Intelligence",
+            "required_stack": "Lyzr × Qdrant × Omi"
+        },
         "docs_url": "/docs",
         "health_url": "/api/health"
     }

@@ -12,12 +12,12 @@ export default function StudyView() {
   const [conversationHistory, setConversationHistory] = useState([]);
 
   const sampleQueries = [
-    { label: 'Science', query: 'What is photosynthesis and how does it work?' },
-    { label: 'Operating Systems', query: 'Explain how Virtual Memory and Page Faults work in OS.' },
-    { label: 'Software Eng', query: 'What are the SOLID design principles in software engineering?' },
+    { label: 'Multi-Agent Meeting Intel', query: 'Summarize our project meeting and extract all action items, owners, and deadlines.' },
+    { label: 'Action Items', query: 'Extract all tasks, owners, deadlines, and key decisions from today\'s session.' },
+    { label: 'Lecture Summary', query: 'Summarize the core concepts and key takeaways from our Operating Systems lecture.' },
     { label: 'DBMS', query: 'How does Strict Two-Phase Locking prevent cascading aborts?' },
+    { label: 'Software Eng', query: 'What are the SOLID design principles in software engineering?' },
     { label: 'Networks', query: 'Compare TCP vs UDP transport layer protocols.' },
-    { label: 'Math', query: 'Explain linear algebra matrix vector multiplication.' },
   ];
 
   const handleSend = async (queryText = inputVal) => {

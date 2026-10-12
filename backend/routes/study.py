@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
@@ -7,7 +7,9 @@ from backend.agents.orchestrator import orchestrator_agent
 from backend.agents.memory_agent import study_memory_agent
 from backend.agents.assistant_agent import study_assistant_agent
 from backend.agents.quiz_agent import quiz_agent
-from backend.services.lyzr_agent_framework import lyzr_framework
+from backend.services.lyzr_agent_framework import lyzr_framework, LyzrAPIError, LyzrTimeoutError
+
+from backend.agents.manager_agent import manager_agent
 
 logger = logging.getLogger("voicestudy.study")
 
@@ -40,113 +42,45 @@ def process_study_request(req: StudyRequest):
     processed_voice = voice_adapter.process_incoming_voice(voice_payload)
     clean_transcript = processed_voice["transcript"]
 
-    intent_data = orchestrator_agent.analyze_intent(clean_transcript, history=req.history)
-    intent = intent_data["intent"]
-    subject = req.subject_override or intent_data["subject"]
-    topic = req.topic_override or intent_data["topic"]
-
-    provider_status = lyzr_framework.get_framework_status()
-
-    response_dict = {}
-    if intent == "REMEMBER":
-        saved_result = study_memory_agent.save_study_memory(
-            text=clean_transcript,
-            subject=subject,
-            topic=topic,
-            memory_type="voice_note" if req.source in ["omi", "web_speech"] else "text_note",
-            uid=user_uid
+    try:
+        response_dict = manager_agent.execute_request(
+            transcript=clean_transcript,
+            user_uid=user_uid,
+            history=req.history,
+            subject_override=req.subject_override,
+            topic_override=req.topic_override
         )
+        response_dict["voice_meta"] = processed_voice
+    except (LyzrAPIError, LyzrTimeoutError) as err:
+        logger.error(f"Lyzr Agent execution error: {err}")
+        provider_status = lyzr_framework.get_framework_status()
         response_dict = {
-            "intent": intent,
-            "orchestration": intent_data,
+            "intent": "ERROR",
+            "orchestration": {"subject": "General", "topic": "Lyzr Execution"},
             "voice_meta": processed_voice,
             "ai_provider": provider_status,
-            "agent_executed": "Study Memory Agent",
-            "message": f"Saved study note under '{subject} - {topic}' in Qdrant.",
-            "response_type": "memory_saved",
+            "agent_executed": "Lyzr Agent",
+            "message": f"Lyzr Agent Error: {str(err)}",
+            "response_type": "error",
             "retrieved_memories": [],
-            "data": saved_result
-        }
-
-    elif intent in ["RETRIEVE", "EXPLAIN"]:
-        retrieved_memories = study_memory_agent.retrieve_relevant_memories(
-            query=clean_transcript,
-            limit=4,
-            uid_filter=user_uid
-        )
-        assistant_reply = study_assistant_agent.answer_question(
-            user_query=clean_transcript,
-            retrieved_memories=retrieved_memories,
-            history=req.history
-        )
-        response_dict = {
-            "intent": intent,
-            "orchestration": intent_data,
-            "voice_meta": processed_voice,
-            "ai_provider": provider_status,
-            "agent_executed": "Study Assistant Agent",
-            "message": assistant_reply["answer"],
-            "response_type": "answer",
-            "retrieved_memories": retrieved_memories,
             "data": {
-                "answer": assistant_reply["answer"],
-                "sources": assistant_reply["sources"],
-                "memories_count": len(retrieved_memories)
+                "error": str(err),
+                "memories_count": 0
             }
         }
-
-    elif intent == "QUIZ":
-        retrieved_memories = study_memory_agent.retrieve_relevant_memories(
-            query=clean_transcript,
-            limit=5,
-            uid_filter=user_uid
-        )
-        quiz_data = quiz_agent.generate_quiz(
-            topic_or_subject=topic if topic != "General Concept" else subject,
-            num_questions=5,
-            difficulty="medium",
-            retrieved_memories=retrieved_memories
-        )
+    except Exception as e:
+        logger.error(f"Unexpected error in study request execution: {e}")
+        provider_status = lyzr_framework.get_framework_status()
         response_dict = {
-            "intent": intent,
-            "orchestration": intent_data,
+            "intent": "ERROR",
+            "orchestration": {"subject": "General", "topic": "General Execution"},
             "voice_meta": processed_voice,
             "ai_provider": provider_status,
-            "agent_executed": "Quiz Agent",
-            "message": f"Generated {quiz_data.get('count', 5)} revision questions for {subject}.",
-            "response_type": "quiz",
-            "retrieved_memories": retrieved_memories,
-            "data": quiz_data
-        }
-
-    elif intent == "SUMMARIZE":
-        summary_data = study_memory_agent.summarize_study_history()
-        retrieved_memories = study_memory_agent.retrieve_relevant_memories(query=clean_transcript, limit=5, uid_filter=user_uid)
-        response_dict = {
-            "intent": intent,
-            "orchestration": intent_data,
-            "voice_meta": processed_voice,
-            "ai_provider": provider_status,
-            "agent_executed": "Study Memory Agent",
-            "message": summary_data["summary"],
-            "response_type": "summary",
-            "retrieved_memories": retrieved_memories,
-            "data": summary_data
-        }
-
-    else:
-        retrieved_memories = study_memory_agent.retrieve_relevant_memories(query=clean_transcript, limit=3, uid_filter=user_uid)
-        assistant_reply = study_assistant_agent.answer_question(clean_transcript, retrieved_memories, history=req.history)
-        response_dict = {
-            "intent": "EXPLAIN",
-            "orchestration": intent_data,
-            "voice_meta": processed_voice,
-            "ai_provider": provider_status,
-            "agent_executed": "Study Assistant Agent",
-            "message": assistant_reply["answer"],
-            "response_type": "answer",
-            "retrieved_memories": retrieved_memories,
-            "data": assistant_reply
+            "agent_executed": "VoiceStudy Backend",
+            "message": f"Internal execution error: {str(e)}",
+            "response_type": "error",
+            "retrieved_memories": [],
+            "data": {"error": str(e)}
         }
 
     logger.info(f"[APP] Final response returned for intent={response_dict.get('intent')} | Agent: {response_dict.get('agent_executed')}")
