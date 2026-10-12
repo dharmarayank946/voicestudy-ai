@@ -158,18 +158,22 @@ class ManagerAgent:
 
             # 3. Memory Assistant if requested
             if "memory_assistant" in delegation:
-                retrieved_memories = study_memory_agent.retrieve_relevant_memories(
+                subject_filter = subject_override if (subject_override and subject_override.strip().lower() not in ["all", "general", "general study", ""]) else None
+                raw_memories = study_memory_agent.retrieve_relevant_memories(
                     query=transcript,
                     limit=3,
+                    subject_filter=subject_filter,
                     uid_filter=user_uid
                 )
                 mem_res = memory_assistant_agent.answer_question(
                     user_query=transcript,
-                    retrieved_memories=retrieved_memories,
-                    history=history
+                    retrieved_memories=raw_memories,
+                    history=history,
+                    subject_hint=subject_filter
                 )
                 executed_agents.append(memory_assistant_agent.name)
                 combined_sections.append(f"### Historical Notes & Context (from Qdrant)\n{mem_res['answer']}")
+                retrieved_memories = mem_res.get("relevant_memories", [])
 
             combined_message = "\n\n---\n\n".join(combined_sections)
             agent_label = f"Manager Agent ({' + '.join(executed_agents)})"
@@ -206,7 +210,8 @@ class ManagerAgent:
 
         elif target == "study_memory":
             hist_res = study_memory_agent.summarize_study_history()
-            retrieved_memories = study_memory_agent.retrieve_relevant_memories(query=transcript, limit=5, uid_filter=user_uid)
+            subject_filter = subject_override if (subject_override and subject_override.strip().lower() not in ["all", "general", "general study", ""]) else None
+            retrieved_memories = study_memory_agent.retrieve_relevant_memories(query=transcript, limit=5, subject_filter=subject_filter, uid_filter=user_uid)
             return {
                 "intent": "SUMMARIZE",
                 "orchestration": plan,
@@ -232,9 +237,11 @@ class ManagerAgent:
             }
 
         elif target == "quiz":
+            subject_filter = subject_override if (subject_override and subject_override.strip().lower() not in ["all", "general", "general study", ""]) else None
             retrieved_memories = study_memory_agent.retrieve_relevant_memories(
                 query=transcript,
                 limit=5,
+                subject_filter=subject_filter,
                 uid_filter=user_uid
             )
             quiz_data = quiz_agent.generate_quiz(
@@ -274,16 +281,20 @@ class ManagerAgent:
             }
 
         else: # memory_assistant
-            retrieved_memories = study_memory_agent.retrieve_relevant_memories(
+            subject_filter = subject_override if (subject_override and subject_override.strip().lower() not in ["all", "general", "general study", ""]) else None
+            raw_memories = study_memory_agent.retrieve_relevant_memories(
                 query=transcript,
                 limit=4,
+                subject_filter=subject_filter,
                 uid_filter=user_uid
             )
             assistant_reply = memory_assistant_agent.answer_question(
                 user_query=transcript,
-                retrieved_memories=retrieved_memories,
-                history=history
+                retrieved_memories=raw_memories,
+                history=history,
+                subject_hint=subject_filter
             )
+            used_memories = assistant_reply.get("relevant_memories", [])
             return {
                 "intent": "EXPLAIN",
                 "orchestration": plan,
@@ -291,11 +302,11 @@ class ManagerAgent:
                 "agent_executed": "Study Assistant Agent",
                 "message": assistant_reply["answer"],
                 "response_type": "answer",
-                "retrieved_memories": retrieved_memories,
+                "retrieved_memories": used_memories,
                 "data": {
                     "answer": assistant_reply["answer"],
                     "sources": assistant_reply.get("sources", []),
-                    "memories_count": len(retrieved_memories)
+                    "memories_count": len(used_memories)
                 }
             }
 

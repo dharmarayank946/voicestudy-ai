@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import httpx
+import uuid
 from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger("voicestudy.lyzr")
@@ -124,15 +125,21 @@ class LyzrAgentFramework:
                 "x-api-key": self.lyzr_api_key,
                 "Content-Type": "application/json"
             }
+            effective_session_id = session_id or f"{self.user_id}_{agent_name.lower()}_{uuid.uuid4().hex[:8]}"
             payload = {
                 "user_id": self.user_id,
                 "agent_id": agent_id,
-                "session_id": session_id or f"{self.user_id}_{agent_name.lower()}",
+                "session_id": effective_session_id,
                 "message": user_input
             }
             try:
                 with httpx.Client(timeout=30.0) as client:
                     response = client.post(self.chat_url, headers=headers, json=payload)
+                    if response.status_code in (429, 502, 503, 504):
+                        import time
+                        time.sleep(1.5)
+                        response = client.post(self.chat_url, headers=headers, json=payload)
+
                     if response.status_code in (200, 201):
                         data = response.json()
                         res_text = (

@@ -82,17 +82,19 @@ export async function saveMemory(text, subject = 'General', topic = 'Study Topic
 }
 
 export async function searchMemories(query, limit = 5, subjectFilter = null) {
+  const cleanFilter = (subjectFilter && subjectFilter !== 'All') ? subjectFilter : null;
   const response = await fetch(`${API_BASE_URL}/memory/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, limit, subject_filter: subjectFilter })
+    body: JSON.stringify({ query, limit, subject_filter: cleanFilter })
   });
   if (!response.ok) throw new Error('Search failed.');
   return await response.json();
 }
 
-export async function getRecentMemories(limit = 20) {
-  const response = await fetch(`${API_BASE_URL}/memory/recent?limit=${limit}`);
+export async function getRecentMemories(limit = 20, subjectFilter = null) {
+  const filterParam = (subjectFilter && subjectFilter !== 'All') ? `&subject_filter=${encodeURIComponent(subjectFilter)}` : '';
+  const response = await fetch(`${API_BASE_URL}/memory/recent?limit=${limit}${filterParam}`);
   if (!response.ok) throw new Error('Failed to fetch memories.');
   return await response.json();
 }

@@ -56,12 +56,17 @@ def search_memory(req: SearchMemoryRequest):
 @router.get("/recent")
 def get_recent_memories(
     limit: int = Query(default=20, le=100),
-    uid_filter: Optional[str] = Query(default=None)
+    uid_filter: Optional[str] = Query(default=None),
+    subject_filter: Optional[str] = Query(default=None)
 ):
-    memories = memory_service.get_all_memories(limit=limit, uid_filter=uid_filter)
-    stats = memory_service.get_stats()
+    memories = memory_service.get_all_memories(
+        limit=limit,
+        uid_filter=uid_filter,
+        subject_filter=subject_filter
+    )
+    stats = memory_service.get_stats(uid_filter=uid_filter)
     return {
-        "total_count": stats["total_memories"],
+        "total_count": len(memories) if subject_filter and subject_filter != "All" else stats["total_memories"],
         "subjects": stats["subjects_list"],
         "topics": stats["topics_list"],
         "memories": memories

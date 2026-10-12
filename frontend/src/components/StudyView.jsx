@@ -8,16 +8,18 @@ export default function StudyView() {
   const [inputVal, setInputVal] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [responseData, setResponseData] = useState(null);
+  const [selectedSubject, setSelectedSubject] = useState('All');
   const [speakerEnabled, setSpeakerEnabled] = useState(true);
   const [conversationHistory, setConversationHistory] = useState([]);
+  const subjects = ['All', 'DBMS', 'Networks', 'Operating Systems', 'Python', 'Science'];
 
   const sampleQueries = [
-    { label: 'Multi-Agent Meeting Intel', query: 'Summarize our project meeting and extract all action items, owners, and deadlines.' },
-    { label: 'Action Items', query: 'Extract all tasks, owners, deadlines, and key decisions from today\'s session.' },
-    { label: 'Lecture Summary', query: 'Summarize the core concepts and key takeaways from our Operating Systems lecture.' },
-    { label: 'DBMS', query: 'How does Strict Two-Phase Locking prevent cascading aborts?' },
-    { label: 'Software Eng', query: 'What are the SOLID design principles in software engineering?' },
+    { label: 'Science', query: 'How does photosynthesis work in green plants?' },
     { label: 'Networks', query: 'Compare TCP vs UDP transport layer protocols.' },
+    { label: 'DBMS', query: 'How does Strict Two-Phase Locking prevent cascading aborts?' },
+    { label: 'Python', query: 'Explain Python functions, variable scope, and return values.' },
+    { label: 'Software Eng', query: 'What are the SOLID design principles in software engineering?' },
+    { label: 'Meeting Intel', query: 'Summarize our project meeting and extract all action items, owners, and deadlines.' },
   ];
 
   const handleSend = async (queryText = inputVal) => {
@@ -30,7 +32,8 @@ export default function StudyView() {
     const newHistory = [...conversationHistory, { role: 'user', content: textToSend }];
 
     try {
-      const data = await processStudyRequest(textToSend, 'text_fallback');
+      const subjectParam = selectedSubject !== 'All' ? selectedSubject : null;
+      const data = await processStudyRequest(textToSend, 'text_fallback', subjectParam);
       setResponseData(data);
       const assistantMessage = data.message || '';
       setConversationHistory([
@@ -177,8 +180,32 @@ export default function StudyView() {
             </button>
           </form>
 
+          {/* Subject Filter Selector */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.85rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Focus Subject:</span>
+            {subjects.map((sub) => (
+              <button
+                key={sub}
+                type="button"
+                onClick={() => setSelectedSubject(sub)}
+                style={{
+                  padding: '0.25rem 0.65rem',
+                  borderRadius: '16px',
+                  border: selectedSubject === sub ? '1px solid var(--accent-cyan)' : '1px solid var(--border-subtle)',
+                  background: selectedSubject === sub ? 'rgba(0, 242, 254, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                  color: selectedSubject === sub ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                  fontWeight: '600',
+                  fontSize: '0.74rem',
+                  cursor: 'pointer'
+                }}
+              >
+                {sub}
+              </button>
+            ))}
+          </div>
+
           {/* Subject Preset Chips */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '1rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
             {sampleQueries.map((item, i) => (
               <button
                 key={i}
@@ -225,6 +252,22 @@ export default function StudyView() {
             <div style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>
               {renderFormattedText(responseData.message)}
             </div>
+
+            {/* Display Retrieved Study Memories if present */}
+            {responseData.retrieved_memories && responseData.retrieved_memories.length > 0 && (
+              <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
+                <h5 style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--accent-cyan)', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <BookOpen size={14} /> Retrieved Notebook Memories ({responseData.retrieved_memories.length})
+                </h5>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {responseData.retrieved_memories.map((m, idx) => (
+                    <div key={idx} style={{ padding: '0.6rem 0.85rem', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '8px', borderLeft: '3px solid var(--accent-emerald)', fontSize: '0.82rem' }}>
+                      <span style={{ fontWeight: '600', color: 'var(--accent-emerald)' }}>[{m.subject || 'General'} - {m.topic || 'Note'}]</span>: {m.text}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Quiz view if generated */}
             {responseData.response_type === 'quiz' && responseData.data?.questions && (

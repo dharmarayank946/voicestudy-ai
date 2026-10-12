@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Brain, Search, Trash2, Plus, Clock, Tag, Sparkles, Filter, AlertCircle, RefreshCw, XCircle } from 'lucide-react';
 import { saveMemory, deleteMemory, searchMemories } from '../services/api';
 
@@ -88,9 +88,17 @@ export default function MemoryView({ memories = [], onRefreshMemories }) {
     }
   };
 
+  const isSubjectMatch = (memorySubject, filterSubject) => {
+    if (!filterSubject || filterSubject === 'All') return true;
+    if (!memorySubject) return false;
+    const mSub = memorySubject.toLowerCase().trim();
+    const fSub = filterSubject.toLowerCase().trim();
+    return mSub === fSub || mSub.includes(fSub) || fSub.includes(mSub);
+  };
+
   const displayedMemories = searchResults !== null 
-    ? searchResults 
-    : memories.filter(m => selectedSubject === 'All' || m.subject === selectedSubject);
+    ? (selectedSubject === 'All' ? searchResults : searchResults.filter(m => isSubjectMatch(m.subject, selectedSubject)))
+    : memories.filter(m => isSubjectMatch(m.subject, selectedSubject));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -191,8 +199,16 @@ export default function MemoryView({ memories = [], onRefreshMemories }) {
               key={sub}
               onClick={() => {
                 setSelectedSubject(sub);
-                setSearchResults(null);
                 setSearchError(null);
+                if (searchQuery.trim()) {
+                  setIsSearching(true);
+                  searchMemories(searchQuery.trim(), 10, sub)
+                    .then(res => setSearchResults(res.results || []))
+                    .catch(err => setSearchError(err.message || 'Search failed'))
+                    .finally(() => setIsSearching(false));
+                } else {
+                  setSearchResults(null);
+                }
               }}
               style={{
                 padding: '0.45rem 0.9rem',
