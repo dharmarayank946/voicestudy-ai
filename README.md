@@ -279,38 +279,90 @@ Run the automated end-to-end integration test suite:
 ---
 
 ## 22. Deployment Instructions
-### Option A: Docker Compose Deployment
-```bash
-docker-compose up -d --build
-```
-* Backend container runs at `http://localhost:8000`.
-* Qdrant persistent server container runs at `http://localhost:6333`.
 
-### Option B: Cloud Hosting (Render / Railway / Vercel)
-1. **Backend API (Render / Railway)**:
-   * Build Command: `pip install -r backend/requirements.txt`
-   * Start Command: `python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-   * Set environment variables from `.env.example`.
-2. **Frontend UI (Vercel / Netlify / Cloudflare Pages)**:
-   * Root Directory: `frontend`
-   * Build Command: `npm run build`
-   * Output Directory: `dist`
-   * Environment Variable: `VITE_API_URL=https://<your-backend-api-url>`
+### Full Architecture Documentation
+See the complete system flowchart and execution sequence diagram in [ARCHITECTURE.md](file:///d:/Projects/VOICESTUDY%20AI/ARCHITECTURE.md).
+
+### Option A: Render Backend Deployment (Free Tier)
+1. **Repository**: Link your GitHub repository (`https://github.com/dharmarayank946/voicestudy-ai`).
+2. **Environment**: Python 3.11+.
+3. **Root Directory**: `.` (leave as repository root).
+4. **Build Command**: `pip install -r backend/requirements.txt`
+5. **Start Command**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+6. **Health Check Path**: `/api/health`
+7. **Environment Variables**:
+   * `HOST`: `0.0.0.0`
+   * `PYTHON_VERSION`: `3.11.0`
+   * `LYZR_API_KEY`: *(Your Lyzr Studio API Key)*
+   * `LYZR_AGENT_ID`: `6accbc391ee741f1f79e1cea` *(Or your custom Lyzr Agent ID)*
+   * `LYZR_USER_ID`: `default_student`
+   * `LYZR_CHAT_URL`: `https://agent-prod.studio.lyzr.ai/v3/inference/chat/`
+   * `QDRANT_STORAGE_PATH`: `./qdrant_data`
+   * `ALLOWED_ORIGINS`: `https://your-frontend.vercel.app` *(Optional, Vercel domains are auto-allowed)*
+   * `OPENAI_API_KEY`: *(Optional: for genuine OpenAI embeddings)*
+   * `QDRANT_URL` / `QDRANT_API_KEY`: *(Optional: if connecting to external Qdrant Cloud cluster)*
+
+> **Note on Free-Tier Qdrant Persistence**:  
+> On Render's Free tier, the local filesystem is ephemeral. Local disk vector data in `./qdrant_data` is re-initialized upon cold start restarts. VoiceStudy AI automatically seeds core course notes upon startup. For persistent production storage across instances, configure a free-tier Qdrant Cloud cluster using `QDRANT_URL` and `QDRANT_API_KEY`.
 
 ---
 
-## 23. Relevant Project Expectations Verification
-- [x] **Working Software**: End-to-end FastAPI backend and glassmorphic React interface actively handling voice ingestion, semantic storage, and multi-agent Q&A.
-- [x] **Clear Project Structure and Documentation**: Clean separation of backend services, agents, Qdrant vector memory, and frontend components.
-- [x] **Observable Agent Workflows**: Live dev execution pipeline logging across stages (`[OMI]` $\rightarrow$ `[MEMORY]` $\rightarrow$ `[QDRANT]` $\rightarrow$ `[LYZR]` $\rightarrow$ `[APP]`).
-- [x] **Relevant Answers Based on Retrieved Memories**: Grounded answers and active recall quizzes synthesized directly from stored user notes with strict multi-tenant isolation.
-- [x] **Mandatory Connected Integrations**: Omi webhooks, Qdrant vector memory, and Lyzr multi-agent reasoning operating in one unified execution loop.
+### Option B: Vercel Frontend Deployment (Free Tier)
+1. **Repository**: Import your GitHub repository (`https://github.com/dharmarayank946/voicestudy-ai`).
+2. **Framework Preset**: `Vite`
+3. **Root Directory**: `frontend`
+4. **Build Command**: `npm run build`
+5. **Output Directory**: `dist`
+6. **Environment Variables**:
+   * `VITE_API_URL`: `https://<your-render-backend-name>.onrender.com`
 
 ---
 
-## 24. Future Improvements
-- Spaced repetition algorithm (SuperMemo SM-2) notification reminders.
-- Multi-language voice note transcription support.
-- Direct PDF and lecture slide ingestion into Qdrant memory.
+## 23. Test Suites & Verification
+
+VoiceStudy AI includes three automated test suites covering all hackathon requirements:
+
+1. **Backend Answer Accuracy & Subject Filtering** (`tests/test_backend_accuracy_filtering.py`):
+   * Verifies photosynthesis questions receive clear educational tutor explanations without refusal when no personal notes match.
+   * Verifies Python searches return only Python materials without DBMS leakage.
+   * Verifies DBMS subject filtering returns only DBMS notes and shows an empty state for unrelated queries.
+   * Verifies cross-subject memory leakage rejection and strict user UID isolation.
+   ```bash
+   python -m unittest tests/test_backend_accuracy_filtering.py
+   ```
+
+2. **Omi Webhook & Qdrant Pipeline** (`tests/test_omi_integration.py`):
+   * Verifies 14 end-to-end integration scenarios for conversation webhooks, real-time ingestion, and Lyzr reasoning.
+   ```bash
+   python -m unittest tests/test_omi_integration.py
+   ```
+
+3. **Multi-Agent Orchestration & AI Tutor** (`tests/test_ai_tutor.py`):
+   * Verifies intent classification, consecutive query topic switching, and session context isolation.
+   ```bash
+   python -m unittest tests/test_ai_tutor.py
+   ```
+
+4. **Frontend Production Build**:
+   ```bash
+   cd frontend && npm run build
+   ```
+
+---
+
+## 24. Physical Omi Device vs. Simulator Mode
+VoiceStudy AI provides dual-mode voice support:
+* **Physical Omi Wearable**: Set your public webhook URL (`https://<host>/omi/conversation?uid=<student_id>`) in the official Omi mobile app.
+* **Built-in Omi Simulator**: The web interface includes an interactive simulator to test lecture recording transcripts and wearable audio payloads without requiring physical Omi hardware.
+
+---
+
+## 25. Submission Checklist
+- [x] **Public GitHub Repository**: [github.com/dharmarayank946/voicestudy-ai](https://github.com/dharmarayank946/voicestudy-ai)
+- [x] **Zero Hardcoded Secrets**: All API keys kept strictly in environment variables.
+- [x] **Genuine Lyzr Studio V3 Agents**: Verified HTTP 200 API connectivity.
+- [x] **Qdrant Vector Memory**: 1536-dimensional embeddings with subject & UID isolation.
+- [x] **Omi Wearable Webhook Receiver**: Non-blocking fast (<50ms) background storage.
+- [x] **Architecture Diagram**: Documented in `ARCHITECTURE.md`.
 
 

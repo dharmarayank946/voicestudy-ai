@@ -21,11 +21,25 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for React frontend (GitHub Pages & local development)
+# Configure CORS (Support local dev, GitHub Pages, and Vercel deployments)
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "https://dharmarayank946.github.io"
+]
+if allowed_origins_env:
+    for origin in allowed_origins_env.split(","):
+        if origin.strip():
+            allowed_origins.append(origin.strip())
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
