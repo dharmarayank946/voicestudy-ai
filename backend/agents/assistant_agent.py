@@ -60,7 +60,6 @@ class StudyAssistantAgent:
                 if hint_match and (overlap >= 2 or (overlap >= 1 and (is_sub_match or m_score >= 0.08)) or m_score >= 0.35):
                     relevant_memories.append(m)
 
-        # Never fallback to irrelevant memories when relevant_memories is empty!
         memories_to_use = relevant_memories
         if memories_to_use:
             context_items = []
@@ -69,9 +68,9 @@ class StudyAssistantAgent:
                 top = m.get("topic", "Topic")
                 txt = m.get("text", "")
                 context_items.append(f"Memory #{idx} [{sub} - {top}]:\n\"{txt}\"")
-            context_str = "RELEVANT STUDY NOTEBOOK MEMORIES (FROM SAVED COURSEWORK):\n" + "\n\n".join(context_items) + "\n\nInstruction: Ground your answer on these saved notes and cite them under '### Saved Study Notebook Entries'."
+            context_str = "RETRIEVED NOTEBOOK MEMORIES (FROM QDRANT VECTOR STORE):\n" + "\n\n".join(context_items) + "\n\nInstruction: Ground your answer on these saved notes and cite them under '### Saved Study Notebook Entries'."
         else:
-            context_str = "RELEVANT STUDY NOTEBOOK MEMORIES (FROM SAVED COURSEWORK):\nNo relevant notebook memories matched this question in the student's personal saved notes.\n\nInstruction: Do NOT refuse to answer. Explain the concept thoroughly, clearly, and accurately from your knowledge as an educational AI tutor. Do NOT claim the student previously studied this topic in their notebook."
+            context_str = "RETRIEVED NOTEBOOK MEMORIES (FROM QDRANT VECTOR STORE):\nNo relevant notebook memories matched this question in the student's personal saved notes.\n\nInstruction: Do NOT refuse to answer. Explain the concept thoroughly, clearly, and accurately from your knowledge as an educational AI tutor. Do NOT claim the student previously studied this topic in their notebook."
 
         history_str = ""
         if history:

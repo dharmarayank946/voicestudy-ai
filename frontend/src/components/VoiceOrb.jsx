@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Mic, Volume2, Sparkles, Send, AlertCircle, VolumeX, Square, Lightbulb } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Mic, Volume2, Sparkles, Play, Send, AlertCircle, VolumeX, Square, Lightbulb, RefreshCw } from 'lucide-react';
 import { speechService } from '../services/speech';
 import { processStudyRequest } from '../services/api';
 
@@ -9,11 +9,15 @@ export default function VoiceOrb({ onTranscriptSubmit, onProcessInput, isProcess
   const [textInput, setTextInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [lastFailedQuery, setLastFailedQuery] = useState('');
   const [speechRate, setSpeechRate] = useState(1.0);
   const [speakerEnabled, setSpeakerEnabled] = useState(true);
 
+  const abortControllerRef = useRef(null);
+
   const promptSuggestions = [
-    "What is photosynthesis and how does it work?",
+    "What is photosynthesis?",
+    "Explain Newton's first law of motion and inertia.",
     "Explain how Virtual Memory and Page Faults work in Operating Systems.",
     "What are the SOLID principles in Software Engineering?",
     "Compare TCP vs UDP transport layer protocols.",
@@ -24,6 +28,9 @@ export default function VoiceOrb({ onTranscriptSubmit, onProcessInput, isProcess
 
   useEffect(() => {
     return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
       speechService.stopListening();
       speechService.stopSpeaking();
     };
@@ -75,8 +82,16 @@ export default function VoiceOrb({ onTranscriptSubmit, onProcessInput, isProcess
   };
 
   const handleSend = async (queryToSend = textInput, source = 'text_fallback') => {
-    const text = queryToSend.trim();
+    const text = (queryToSend || textInput).trim();
     if (!text || isProcessing) return;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    speechService.stopSpeaking();
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     setIsProcessing(true);
     setErrorMsg(null);
@@ -88,36 +103,66 @@ export default function VoiceOrb({ onTranscriptSubmit, onProcessInput, isProcess
       if (submitHandler) {
         data = await submitHandler(text, source);
       } else {
-        data = await processStudyRequest(text, source);
+        data = await processStudyRequest(text, source, null, null, controller.signal);
       }
 
-      setOrbState('responding');
-      const spokenMessage = data?.message || data?.answer || '';
-      if (speakerEnabled && spokenMessage) {
-        speechService.speak(spokenMessage, () => {
-          setOrbState('idle');
-        });
+      // Handle server error responses (e.g. Lyzr API error)
+      if (data?.response_type === 'error' || data?.intent === 'ERROR') {
+        const rawErr = data.message || data.data?.error || 'AI service error encountered.';
+        setErrorMsg(rawErr);
+        setLastFailedQuery(text);
+        setOrbState('error');
+        // Do NOT play audio of error messages
       } else {
-        setOrbState('idle');
+        setOrbState('responding');
+        setLastFailedQuery('');
+        const spokenMessage = data?.message || data?.answer || '';
+        if (speakerEnabled && spokenMessage) {
+          speechService.speak(
+            spokenMessage, 
+            () => setOrbState('idle'),
+            () => setOrbState('responding')
+          );
+        } else {
+          setOrbState('idle');
+        }
       }
     } catch (err) {
-      console.error('Voice Orb submission error:', err);
-      setErrorMsg(err.message || 'Failed to process study request.');
-      setOrbState('error');
+      if (err.name === 'AbortError') {
+        setOrbState('idle');
+      } else {
+        console.error('Voice Orb submission error:', err);
+        setLastFailedQuery(text);
+        setErrorMsg(err.message || 'Failed to process study request.');
+        setOrbState('error');
+      }
     } finally {
       setIsProcessing(false);
+      abortControllerRef.current = null;
       setTextInput('');
+    }
+  };
+
+  const handleStopExplaining = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    speechService.stopSpeaking();
+    speechService.stopListening();
+    setIsProcessing(false);
+    setOrbState('idle');
+  };
+
+  const handleRetry = () => {
+    if (lastFailedQuery) {
+      handleSend(lastFailedQuery);
     }
   };
 
   const handleRateChange = (newRate) => {
     setSpeechRate(newRate);
     speechService.setRate(newRate);
-  };
-
-  const handleStopSpeech = () => {
-    speechService.stopSpeaking();
-    setOrbState('idle');
   };
 
   return (
@@ -129,12 +174,12 @@ export default function VoiceOrb({ onTranscriptSubmit, onProcessInput, isProcess
           Interactive Voice Orb
         </h2>
         <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
-          Tap the Orb or type a question to learn across any subject
+          Tap the Orb or type an educational question to learn across any subject
         </p>
       </div>
 
       {/* Voice Orb Interactive Element */}
-      <div className="voice-orb-wrapper" onClick={toggleListening}>
+      <div className="voice-orb-wrapper" onClick={toggleListening} title={orbState === 'listening' ? "Tap to stop listening" : "Tap to speak question"}>
         <div className={`orb-ring orb-ring-1`} />
         <div className={`orb-ring orb-ring-2`} />
         <div className={`orb-ring orb-ring-3`} />
@@ -169,34 +214,55 @@ export default function VoiceOrb({ onTranscriptSubmit, onProcessInput, isProcess
                  orbState === 'error' ? 'var(--accent-rose)' : 'var(--text-secondary)'
         }}>
           {orbState === 'listening' && (transcriptText ? `Transcript: "${transcriptText}"` : 'Listening... Speak your study question')}
-          {orbState === 'processing' && 'AI Thinking... Analyzing Question'}
-          {orbState === 'responding' && 'Voice AI Responding... Spoken Answer Active'}
+          {orbState === 'processing' && 'AI Thinking... Generating structured explanation'}
+          {orbState === 'responding' && 'Voice AI Explaining... Spoken answer active'}
           {orbState === 'error' && (errorMsg || 'Error Encountered')}
           {orbState === 'idle' && 'Ready | Tap Orb to Speak or Type Query Below'}
         </p>
       </div>
 
-      {/* Error Banner */}
+      {/* Error Banner with Retry Button */}
       {errorMsg && (
         <div style={{
-          background: 'rgba(244, 63, 94, 0.15)',
-          border: '1px solid rgba(244, 63, 94, 0.3)',
-          borderRadius: '10px',
-          padding: '0.6rem 1rem',
-          marginBottom: '1rem',
+          background: 'rgba(244, 63, 94, 0.12)',
+          border: '1px solid rgba(244, 63, 94, 0.35)',
+          borderRadius: '12px',
+          padding: '0.75rem 1.25rem',
+          marginBottom: '1.25rem',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem',
+          justifyContent: 'space-between',
+          gap: '1rem',
           fontSize: '0.85rem',
-          color: 'var(--accent-rose)'
+          color: 'var(--accent-rose)',
+          width: '100%',
+          maxWidth: '640px',
+          flexWrap: 'wrap'
         }}>
-          <AlertCircle size={16} />
-          {errorMsg}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: '1 1 300px' }}>
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span>{errorMsg}</span>
+          </div>
+          {lastFailedQuery && (
+            <button
+              className="btn-primary"
+              onClick={handleRetry}
+              disabled={isProcessing}
+              style={{
+                fontSize: '0.78rem',
+                padding: '0.35rem 0.75rem',
+                gap: '0.35rem',
+                background: 'var(--gradient-cyan-emerald)'
+              }}
+            >
+              <RefreshCw size={13} /> Retry
+            </button>
+          )}
         </div>
       )}
 
-      {/* Controls Bar: Voice Speed & Mute / Stop */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+      {/* Controls Bar: Voice Speed & Stop Explaining */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
           <span>Speed:</span>
           {[0.8, 1.0, 1.2, 1.5].map((rate) => (
@@ -218,13 +284,22 @@ export default function VoiceOrb({ onTranscriptSubmit, onProcessInput, isProcess
           ))}
         </div>
 
-        {orbState === 'responding' && (
+        {/* Stop Explaining Button — Active during processing or responding */}
+        {(orbState === 'processing' || orbState === 'responding' || isProcessing) && (
           <button
             className="btn-secondary"
-            onClick={handleStopSpeech}
-            style={{ fontSize: '0.8rem', padding: '0.35rem 0.75rem', gap: '0.35rem', color: 'var(--accent-rose)' }}
+            onClick={handleStopExplaining}
+            style={{
+              fontSize: '0.8rem',
+              padding: '0.35rem 0.75rem',
+              gap: '0.35rem',
+              color: 'var(--accent-rose)',
+              borderColor: 'rgba(244, 63, 94, 0.4)',
+              background: 'rgba(244, 63, 94, 0.1)'
+            }}
+            title="Stop current explanation and speech"
           >
-            <Square size={14} /> Stop Speaking
+            <Square size={14} fill="currentColor" /> Stop Explaining
           </button>
         )}
       </div>
@@ -238,15 +313,17 @@ export default function VoiceOrb({ onTranscriptSubmit, onProcessInput, isProcess
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+          disabled={isProcessing}
         />
 
         <button 
           className="btn-primary" 
           onClick={() => handleSend()}
           disabled={!textInput.trim() || isProcessing}
-          style={{ whiteSpace: 'nowrap', gap: '0.4rem' }}
+          style={{ whiteSpace: 'nowrap', gap: '0.4rem', padding: '0.7rem 1.1rem' }}
+          title="Start an AI explanation"
         >
-          <Send size={18} /> Send
+          {isProcessing ? <Sparkles size={16} className="spin" /> : <Play size={16} fill="currentColor" />} Start Explaining
         </button>
 
         <button
@@ -266,7 +343,7 @@ export default function VoiceOrb({ onTranscriptSubmit, onProcessInput, isProcess
       {/* Sample Prompt Chips */}
       <div style={{ width: '100%', maxWidth: '780px' }}>
         <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', letterSpacing: '0.03em', fontWeight: '600', marginBottom: '0.75rem', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>
-          <Lightbulb size={15} color="var(--accent-amber)" /> Try asking a study question:
+          <Lightbulb size={15} color="var(--accent-amber)" /> Try asking an educational question:
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
           {promptSuggestions.map((prompt, idx) => (

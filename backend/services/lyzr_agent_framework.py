@@ -4,6 +4,9 @@ import logging
 import httpx
 import uuid
 from typing import Dict, Any, Optional, List
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 logger = logging.getLogger("voicestudy.lyzr")
 
@@ -70,12 +73,21 @@ class LyzrAgentFramework:
             return self.default_agent_id
         return f"voicestudy_{clean_name.lower()}"
 
+    def is_valid_openai_configured(self) -> bool:
+        key = self.llm_api_key
+        return bool(
+            key and 
+            key.startswith("sk-") and 
+            "your_openai_api_key" not in key and 
+            "placeholder" not in key.lower()
+        )
+
     def get_framework_status(self) -> Dict[str, Any]:
-        if self.lyzr_api_key:
+        if self.lyzr_api_key and "your_lyzr_api_key" not in self.lyzr_api_key:
             mode = "real_lyzr_api"
             is_real_ai = True
             provider_name = "Lyzr Studio V3 Chat API"
-        elif self.llm_api_key and self.llm_api_key.startswith("sk-"):
+        elif self.is_valid_openai_configured():
             mode = "openai_llm_fallback"
             is_real_ai = True
             provider_name = "OpenAI API"
@@ -159,42 +171,58 @@ class LyzrAgentFramework:
                         raise LyzrAPIError(f"Lyzr API returned HTTP {response.status_code}: {err_snippet}")
             except httpx.TimeoutException as te:
                 logger.error(f"[LYZR] Timeout calling Lyzr API at {self.chat_url}: {te}")
+                if self.is_valid_openai_configured():
+                    logger.info("[LYZR] Lyzr API timed out, falling back to configured OpenAI provider.")
+                    return self._execute_openai_prompt(system_instructions, user_input, temperature, json_output)
                 raise LyzrTimeoutError("Lyzr Agent request timed out after 30 seconds.")
             except (LyzrAPIError, LyzrTimeoutError):
+                if self.is_valid_openai_configured():
+                    logger.info("[LYZR] Lyzr API error, falling back to configured OpenAI provider.")
+                    return self._execute_openai_prompt(system_instructions, user_input, temperature, json_output)
                 raise
             except httpx.HTTPError as he:
                 logger.error(f"[LYZR] HTTP error communicating with Lyzr API: {he}")
+                if self.is_valid_openai_configured():
+                    logger.info("[LYZR] Lyzr HTTP error, falling back to configured OpenAI provider.")
+                    return self._execute_openai_prompt(system_instructions, user_input, temperature, json_output)
                 raise LyzrAPIError(f"Lyzr Agent HTTP error: {he}")
             except Exception as e:
                 logger.error(f"[LYZR] Unexpected error calling Lyzr API: {e}")
+                if self.is_valid_openai_configured():
+                    logger.info("[LYZR] Lyzr unexpected error, falling back to configured OpenAI provider.")
+                    return self._execute_openai_prompt(system_instructions, user_input, temperature, json_output)
                 raise LyzrAPIError(f"Lyzr Agent request failed: {e}")
 
-        if self.llm_api_key and self.llm_api_key.startswith("sk-"):
-            try:
-                from openai import OpenAI
-                client = OpenAI(api_key=self.llm_api_key)
-                
-                messages = [
-                    {"role": "system", "content": system_instructions},
-                    {"role": "user", "content": user_input}
-                ]
-                
-                kwargs = {
-                    "model": self.model,
-                    "messages": messages,
-                    "temperature": temperature,
-                }
-                if json_output:
-                    kwargs["response_format"] = {"type": "json_object"}
-
-                response = client.chat.completions.create(**kwargs)
-                res_text = response.choices[0].message.content or ""
-                return res_text
-            except Exception as e:
-                logger.error(f"[LYZR] OpenAI LLM API execution failed: {e}")
+        if self.is_valid_openai_configured():
+            return self._execute_openai_prompt(system_instructions, user_input, temperature, json_output)
 
         res_text = self._generate_fallback_response(agent_name, user_input, json_output)
         return res_text
+
+    def _execute_openai_prompt(self, system_instructions: str, user_input: str, temperature: float = 0.3, json_output: bool = False) -> str:
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=self.llm_api_key)
+            
+            messages = [
+                {"role": "system", "content": system_instructions},
+                {"role": "user", "content": user_input}
+            ]
+            
+            kwargs = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature,
+            }
+            if json_output:
+                kwargs["response_format"] = {"type": "json_object"}
+
+            response = client.chat.completions.create(**kwargs)
+            res_text = response.choices[0].message.content or ""
+            return res_text
+        except Exception as e:
+            logger.error(f"[LYZR] OpenAI LLM API execution failed: {e}")
+            raise LyzrAPIError(f"AI Provider execution failed: {e}")
 
     def _generate_fallback_response(self, agent_name: str, user_input: str, json_output: bool) -> str:
         lower_input = user_input.lower()
@@ -317,6 +345,15 @@ class LyzrAgentFramework:
                    "3. **Food Production**: Solar energy converts water and carbon dioxide into glucose (sugar) for plant growth.\n" \
                    "4. **Oxygen Release**: Oxygen molecules are released back into the air as a natural byproduct.\n\n" \
                    "**Example**: A tree absorbing sunlight on a warm afternoon to make energy for growth while producing clean oxygen for animals and humans to breathe."
+
+        # 1b. Physics & Mechanics (Newton's Laws of Motion, Inertia)
+        if any(k in q_lower for k in ["newton", "inertia", "first law", "laws of motion", "net force"]):
+            return "Newton's First Law of Motion (the Law of Inertia) states that an object at rest will remain at rest, and an object moving at a constant velocity will continue in a straight line, unless acted upon by a net external force.\n\n" \
+                   "### Key Principles:\n" \
+                   "1. **Inertia**: The natural tendency of any physical body to resist changes to its state of motion. Mass is the direct quantitative measure of an object's inertia.\n" \
+                   "2. **Net Force Equilibrium ($\\\\Sigma F = 0$)**: When all forces acting on an object cancel out, net acceleration is zero ($a = 0$), so velocity remains unchanged.\n" \
+                   "3. **Unbalanced External Forces**: An object only speeds up, slows down, or changes direction when an unbalanced external force (like friction or gravity) is applied.\n\n" \
+                   "**Example**: A passenger lunging forward when a bus abruptly brakes. Because the passenger's body has inertia, it naturally continues moving forward at the bus's previous speed until restrained by a seatbelt."
 
         # 2. Operating Systems
         if any(k in q_lower for k in ["virtual memory", "paging", "page fault", "tlb"]):

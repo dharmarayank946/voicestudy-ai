@@ -54,17 +54,41 @@ def process_study_request(req: StudyRequest):
     except (LyzrAPIError, LyzrTimeoutError) as err:
         logger.error(f"Lyzr Agent execution error: {err}")
         provider_status = lyzr_framework.get_framework_status()
+        err_str = str(err)
+        
+        # User-friendly error diagnosis without leaking secrets
+        if "401" in err_str or "403" in err_str or "Invalid API Key" in err_str:
+            code_hint = " (HTTP 403 Forbidden)" if "403" in err_str else (" (HTTP 401 Unauthorized)" if "401" in err_str else "")
+            friendly_detail = f"Lyzr API authentication failed{code_hint}: Invalid API key. Please verify your LYZR_API_KEY environment variable in server configuration."
+            error_code = "LYZR_AUTH_ERROR"
+        elif "timed out" in err_str.lower() or isinstance(err, LyzrTimeoutError):
+            friendly_detail = "Lyzr API request timed out after 30 seconds. Please check your network connection and retry."
+            error_code = "LYZR_TIMEOUT"
+        elif "503" in err_str or "502" in err_str:
+            friendly_detail = "Lyzr API returned HTTP 503: Service temporarily unavailable. Please retry shortly."
+            error_code = "LYZR_SERVICE_UNAVAILABLE"
+        else:
+            friendly_detail = f"Lyzr API request failed: {err_str[:120]}"
+            error_code = "LYZR_API_ERROR"
+
         response_dict = {
             "intent": "ERROR",
-            "orchestration": {"subject": "General", "topic": "Lyzr Execution"},
+            "orchestration": {
+                "subject": req.subject_override or "General",
+                "topic": req.topic_override or "AI Agent Execution"
+            },
             "voice_meta": processed_voice,
             "ai_provider": provider_status,
             "agent_executed": "Lyzr Agent",
-            "message": f"Lyzr Agent Error: {str(err)}",
+            "message": f"Lyzr Agent Error: {friendly_detail}",
             "response_type": "error",
+            "error_code": error_code,
+            "retryable": True,
             "retrieved_memories": [],
             "data": {
-                "error": str(err),
+                "error": friendly_detail,
+                "error_code": error_code,
+                "retryable": True,
                 "memories_count": 0
             }
         }

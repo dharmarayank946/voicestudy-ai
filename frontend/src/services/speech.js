@@ -1,4 +1,4 @@
-﻿export class SpeechService {
+export class SpeechService {
   constructor() {
     this.recognition = null;
     this.synth = typeof window !== 'undefined' ? window.speechSynthesis || null : null;
@@ -117,12 +117,19 @@
     return clean.slice(0, 600).trim();
   }
 
-  speak(text, onEnd) {
+  isSpeaking() {
+    return Boolean(this.synth && (this.synth.speaking || this.synth.pending));
+  }
+
+  speak(text, onEnd, onStart) {
     if (!this.synth) return;
     this.synth.cancel();
 
     const cleanText = this.cleanMarkdownForSpeech(text);
-    if (!cleanText) return;
+    if (!cleanText) {
+      if (onEnd) onEnd();
+      return;
+    }
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.rate = this.speechRate;
@@ -132,9 +139,19 @@
       utterance.voice = this.selectedVoice;
     }
 
+    if (onStart) {
+      utterance.onstart = () => {
+        onStart();
+      };
+    }
+
     if (onEnd) {
-      utterance.onend = onEnd;
-      utterance.onerror = onEnd;
+      utterance.onend = () => {
+        onEnd();
+      };
+      utterance.onerror = () => {
+        onEnd();
+      };
     }
 
     this.synth.speak(utterance);

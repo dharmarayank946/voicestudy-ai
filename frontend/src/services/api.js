@@ -29,11 +29,12 @@ export async function fetchHealth() {
 }
 
 
-export async function processStudyRequest(transcript, source = 'web_speech', subjectOverride = null, topicOverride = null) {
+export async function processStudyRequest(transcript, source = 'web_speech', subjectOverride = null, topicOverride = null, signal = null) {
   let response;
   try {
     response = await fetch(`${API_BASE_URL}/study`, {
       method: 'POST',
+      signal,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         transcript,
@@ -44,13 +45,18 @@ export async function processStudyRequest(transcript, source = 'web_speech', sub
       })
     });
   } catch (netErr) {
+    if (netErr.name === 'AbortError') {
+      throw netErr;
+    }
     try {
       response = await fetch('/api/study', {
         method: 'POST',
+        signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transcript, source })
       });
     } catch (e) {
+      if (e.name === 'AbortError') throw e;
       throw new Error('Unable to connect to backend server. Please verify backend server is running on port 8000.');
     }
   }
